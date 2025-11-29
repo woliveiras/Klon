@@ -16,15 +16,7 @@ type System interface {
 }
 
 // DefaultSystem is used by Plan. It can be replaced in tests if needed.
-var DefaultSystem System = noopSystem{}
-
-type noopSystem struct{}
-
-func (noopSystem) BootDisk() (string, error) {
-	// Placeholder implementation for now; will be replaced by a real one
-	// that inspects the system.
-	return "booted-disk", nil
-}
+var DefaultSystem System = NewLocalSystem()
 
 // PlanResult is a high-level description of what will be cloned.
 // This is intentionally simple for the first TDD step.
