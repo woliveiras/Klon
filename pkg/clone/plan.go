@@ -115,7 +115,15 @@ func PlanWithSystem(sys System, opts PlanOptions) (PlanResult, error) {
 func (p PlanResult) String() string {
 	out := fmt.Sprintf("Clone plan: %s -> %s\n", p.SourceDisk, p.DestinationDisk)
 	for _, part := range p.Partitions {
-		out += fmt.Sprintf("  - partition %d: %s\n", part.Index, part.Action)
+		label := fmt.Sprintf("partition %d", part.Index)
+		if part.Device != "" {
+			label = fmt.Sprintf("%s (%s", label, part.Device)
+			if part.Mountpoint != "" {
+				label = fmt.Sprintf("%s mounted on %s", label, part.Mountpoint)
+			}
+			label += ")"
+		}
+		out += fmt.Sprintf("  - %s: %s\n", label, part.Action)
 	}
 	return out
 }

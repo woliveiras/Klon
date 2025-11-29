@@ -2,6 +2,7 @@ package clone
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -95,6 +96,33 @@ func TestPlanWithSystem_UsesMountedPartitions(t *testing.T) {
 		t.Fatalf("unexpected second partition in plan: %+v", plan.Partitions[1])
 	}
 }
+
+func TestPlanResult_StringIncludesDeviceAndMountpoint(t *testing.T) {
+	p := PlanResult{
+		SourceDisk:      "/dev/mmcblk0",
+		DestinationDisk: "sda",
+		Partitions: []PartitionPlan{
+			{
+				Index:      1,
+				Device:     "/dev/mmcblk0p1",
+				Mountpoint: "/boot",
+				Action:     "initialize+sync",
+			},
+		},
+	}
+
+	out := p.String()
+	if !strings.Contains(out, "/dev/mmcblk0p1") {
+		t.Fatalf("expected output to contain device, got: %q", out)
+	}
+	if !strings.Contains(out, "mounted on /boot") {
+		t.Fatalf("expected output to contain mountpoint, got: %q", out)
+	}
+	if !strings.Contains(out, "initialize+sync") {
+		t.Fatalf("expected output to contain action, got: %q", out)
+	}
+}
+
 
 func TestPlanWithSystem_InitializeMarksActions(t *testing.T) {
 	sys := fakeSystem{
