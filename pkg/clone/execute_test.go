@@ -23,3 +23,34 @@ func TestBuildExecutionSteps_BuildsOneStepPerPartition(t *testing.T) {
 	}
 }
 
+type fakeRunner struct {
+	steps []ExecutionStep
+	err   error
+}
+
+func (f *fakeRunner) Run(step ExecutionStep) error {
+	f.steps = append(f.steps, step)
+	return f.err
+}
+
+func TestExecute_DelegatesToRunner(t *testing.T) {
+	plan := PlanResult{
+		SourceDisk:      "/dev/mmcblk0",
+		DestinationDisk: "sda",
+		Partitions: []PartitionPlan{
+			{Index: 1, Device: "/dev/mmcblk0p1", Mountpoint: "/boot", Action: "sync"},
+			{Index: 2, Device: "/dev/mmcblk0p2", Mountpoint: "/", Action: "sync"},
+		},
+	}
+	opts := PlanOptions{Destination: "sda"}
+
+	r := &fakeRunner{}
+	if err := Execute(plan, opts, r); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(r.steps) != 2 {
+		t.Fatalf("expected runner to receive 2 steps, got %d", len(r.steps))
+	}
+}
+
