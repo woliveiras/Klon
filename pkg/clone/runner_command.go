@@ -69,8 +69,21 @@ func (r *CommandRunner) runGrowPartition(step ExecutionStep) error {
 		return fmt.Errorf("grow-partition on %s: missing destination or partition index", step.DestinationDisk)
 	}
 	disk := ensureDevPrefix(step.DestinationDisk)
+	part := partitionDevice(step.DestinationDisk, step.PartitionIndex)
+
+	// First grow the partition to consume all remaining space.
 	cmdStr := fmt.Sprintf("parted -s %s resizepart %d 100%%", disk, step.PartitionIndex)
-	return runShellCommand(cmdStr)
+	if err := runShellCommand(cmdStr); err != nil {
+		return fmt.Errorf("grow-partition on %s: parted failed: %w", step.DestinationDisk, err)
+	}
+
+	// Then grow the filesystem inside the partition. We currently support
+	// ext-based roots (mkfs.ext4), so resize2fs is appropriate here.
+	if err := runShellCommand(fmt.Sprintf("resize2fs %s", part)); err != nil {
+		return fmt.Errorf("grow-partition on %s: resize2fs failed for %s: %w", step.DestinationDisk, part, err)
+	}
+
+	return nil
 }
 
 func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
