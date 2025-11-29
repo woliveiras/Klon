@@ -16,6 +16,8 @@ type PlanOptions struct {
 	// be prepared when Initialize is true. For now it is descriptive only.
 	// Examples: "clone-table", "new-layout".
 	PartitionStrategy string
+	ExcludePatterns   []string
+	ExcludeFromFiles  []string
 }
 
 // System abstracts how we discover information about disks and partitions

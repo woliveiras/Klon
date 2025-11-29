@@ -16,12 +16,16 @@ import (
 type CommandRunner struct {
 	DestRoot          string
 	PartitionStrategy string
+	ExcludePatterns   []string
+	ExcludeFromFiles  []string
 }
 
-func NewCommandRunner(destRoot, strategy string) *CommandRunner {
+func NewCommandRunner(destRoot, strategy string, excludePatterns, excludeFromFiles []string) *CommandRunner {
 	return &CommandRunner{
 		DestRoot:          destRoot,
 		PartitionStrategy: strategy,
+		ExcludePatterns:   excludePatterns,
+		ExcludeFromFiles:  excludeFromFiles,
 	}
 }
 
@@ -78,7 +82,7 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 		}
 	}()
 
-	cmdStr, err := BuildSyncCommand(step, r.DestRoot)
+	cmdStr, err := BuildSyncCommand(step, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles)
 	if err != nil {
 		return err
 	}

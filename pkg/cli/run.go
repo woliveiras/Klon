@@ -25,6 +25,8 @@ type Options struct {
 	UnattendedInit       bool // -U
 	Verbose              bool // -v
 	PartitionStrategy    string
+	ExcludePatterns      []string
+	ExcludeFromFiles     []string
 }
 
 // UI abstracts user interaction so we can support both interactive
@@ -117,6 +119,8 @@ func run(args []string, ui UI) error {
 		UnattendedInit:     opts.UnattendedInit,
 		Verbose:            opts.Verbose,
 		PartitionStrategy:  opts.PartitionStrategy,
+		ExcludePatterns:    opts.ExcludePatterns,
+		ExcludeFromFiles:   opts.ExcludeFromFiles,
 	}
 
 	plan, err := clone.Plan(planOpts)
@@ -132,21 +136,36 @@ func run(args []string, ui UI) error {
 			return err
 		}
 
-		ui.Println(plan.String())
-		ui.Println("Planned execution steps:")
-		steps := clone.BuildExecutionSteps(plan, planOpts)
-		for _, step := range steps {
-			ui.Println("  -", step.Operation, ":", step.Description)
-		}
-		ok, err := ui.Confirm("Proceed with executing these steps on the destination disk?")
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return fmt.Errorf("execution cancelled by user")
+		// Decide confirmation behaviour based on quiet/unattended flags.
+		askConfirm := true
+		if opts.Quiet {
+			askConfirm = false
+		} else if opts.UnattendedInit && opts.Initialize {
+			askConfirm = false
+		} else if opts.Unattended && !opts.Initialize {
+			askConfirm = false
 		}
 
-		runner := clone.NewCommandRunner(opts.DestRoot, opts.PartitionStrategy)
+		if !opts.Quiet {
+			ui.Println(plan.String())
+			ui.Println("Planned execution steps:")
+			steps := clone.BuildExecutionSteps(plan, planOpts)
+			for _, step := range steps {
+				ui.Println("  -", step.Operation, ":", step.Description)
+			}
+		}
+
+		if askConfirm {
+			ok, err := ui.Confirm("Proceed with executing these steps on the destination disk?")
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return fmt.Errorf("execution cancelled by user")
+			}
+		}
+
+		runner := clone.NewCommandRunner(opts.DestRoot, opts.PartitionStrategy, planOpts.ExcludePatterns, planOpts.ExcludeFromFiles)
 		return clone.Execute(plan, planOpts, runner)
 	}
 
@@ -175,6 +194,8 @@ func parseFlags(args []string) (Options, []string, error) {
 		DryRun:   true,
 		DestRoot: "/mnt/clone",
 	}
+	var excludeList string
+	var excludeFromList string
 
 	fs.BoolVar(&opts.DryRun, "dry-run", true, "show what would be cloned without making changes")
 	fs.BoolVar(&opts.Execute, "execute", false, "execute planned steps (requires GOPI_ALLOW_WRITE=1)")
@@ -186,6 +207,8 @@ func parseFlags(args []string) (Options, []string, error) {
 	fs.BoolVar(&opts.Unattended, "u", false, "unattended clone if not initializing")
 	fs.BoolVar(&opts.UnattendedInit, "U", false, "unattended even if initializing")
 	fs.BoolVar(&opts.Verbose, "v", false, "verbose mode")
+	fs.StringVar(&excludeList, "exclude", "", "comma-separated patterns to exclude from rsync")
+	fs.StringVar(&excludeFromList, "exclude-from", "", "comma-separated files with rsync exclude patterns")
 
 	if err := fs.Parse(args[1:]); err != nil {
 		return Options{}, nil, err
@@ -194,6 +217,23 @@ func parseFlags(args []string) (Options, []string, error) {
 	// Apply implied semantics.
 	if opts.Quiet {
 		opts.Unattended = true
+	}
+
+	if excludeList != "" {
+		for _, p := range strings.Split(excludeList, ",") {
+			p = strings.TrimSpace(p)
+			if p != "" {
+				opts.ExcludePatterns = append(opts.ExcludePatterns, p)
+			}
+		}
+	}
+	if excludeFromList != "" {
+		for _, f := range strings.Split(excludeFromList, ",") {
+			f = strings.TrimSpace(f)
+			if f != "" {
+				opts.ExcludeFromFiles = append(opts.ExcludeFromFiles, f)
+			}
+		}
 	}
 
 	return opts, fs.Args(), nil

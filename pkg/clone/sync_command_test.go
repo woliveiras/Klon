@@ -11,7 +11,7 @@ func TestBuildSyncCommand_UsesMountpoints(t *testing.T) {
 		Mountpoint: "/boot",
 	}
 
-	cmd, err := BuildSyncCommand(step, "/mnt/clone")
+	cmd, err := BuildSyncCommand(step, "/mnt/clone", nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -28,7 +28,7 @@ func TestBuildSyncCommand_RootMountpoint(t *testing.T) {
 		Mountpoint: "/",
 	}
 
-	cmd, err := BuildSyncCommand(step, "/mnt/clone")
+	cmd, err := BuildSyncCommand(step, "/mnt/clone", nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

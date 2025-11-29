@@ -13,7 +13,7 @@ import (
 // (for example, "/mnt/clone"). The destination path is derived by joining
 // destRoot with the source mountpoint, except for "/" which maps directly
 // to destRoot.
-func BuildSyncCommand(step ExecutionStep, destRoot string) (string, error) {
+func BuildSyncCommand(step ExecutionStep, destRoot string, extraExcludes []string, extraExcludeFrom []string) (string, error) {
 	if step.Operation != "sync-filesystem" {
 		return "", fmt.Errorf("BuildSyncCommand: unsupported operation %q", step.Operation)
 	}
@@ -33,6 +33,13 @@ func BuildSyncCommand(step ExecutionStep, destRoot string) (string, error) {
 	}
 
 	args := []string{"rsync", "-aAXH", "--delete"}
+
+	for _, p := range extraExcludes {
+		args = append(args, "--exclude", p)
+	}
+	for _, f := range extraExcludeFrom {
+		args = append(args, "--exclude-from", f)
+	}
 
 	// When syncing the root filesystem, exclude pseudo filesystems and the
 	// destination root itself to avoid recursion.
