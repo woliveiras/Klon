@@ -22,8 +22,8 @@ type Runner interface {
 }
 
 // BuildExecutionSteps converts a PlanResult and the corresponding PlanOptions
-// into a list of high-level execution steps. This is a preparation for a
-// future Execute function that will actually perform these steps.
+// into a list of high-level execution steps. This is a preparation for an
+// Apply function that will actually perform these steps.
 func BuildExecutionSteps(plan PlanResult, opts PlanOptions) []ExecutionStep {
 	var steps []ExecutionStep
 
@@ -85,14 +85,16 @@ func BuildExecutionSteps(plan PlanResult, opts PlanOptions) []ExecutionStep {
 	return steps
 }
 
-// Execute runs the provided plan using the given runner. At this stage, Execute
-// only iterates over the high-level steps and delegates to the Runner, keeping
-// actual side effects behind an interface.
-func Execute(plan PlanResult, opts PlanOptions, runner Runner) error {
+// Apply runs the provided plan using the given runner. It iterates over the
+// high-level steps and delegates to the Runner, keeping actual side effects
+// behind an interface. If a step fails, it returns an error that includes
+// contextual information about which step failed.
+func Apply(plan PlanResult, opts PlanOptions, runner Runner) error {
 	steps := BuildExecutionSteps(plan, opts)
 	for _, step := range steps {
 		if err := runner.Run(step); err != nil {
-			return err
+			return fmt.Errorf("apply failed on operation %q (dest=%s, part=%d): %w",
+				step.Operation, step.DestinationDisk, step.PartitionIndex, err)
 		}
 	}
 	return nil

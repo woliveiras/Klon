@@ -67,7 +67,7 @@ func (f *fakeRunner) Run(step ExecutionStep) error {
 	return f.err
 }
 
-func TestExecute_DelegatesToRunner(t *testing.T) {
+func TestApply_DelegatesToRunner(t *testing.T) {
 	plan := PlanResult{
 		SourceDisk:      "/dev/mmcblk0",
 		DestinationDisk: "sda",
@@ -79,7 +79,7 @@ func TestExecute_DelegatesToRunner(t *testing.T) {
 	opts := PlanOptions{Destination: "sda"}
 
 	r := &fakeRunner{}
-	if err := Execute(plan, opts, r); err != nil {
+	if err := Apply(plan, opts, r); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 

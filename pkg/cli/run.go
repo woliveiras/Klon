@@ -11,11 +11,8 @@ import (
 	"github.com/woliveiras/klon/pkg/clone"
 )
 
-// Options holds high-level configuration for a clone run.
 type Options struct {
 	Destination          string
-	DryRun               bool
-	Execute              bool
 	DestRoot             string
 	Initialize           bool // -f
 	ForceTwoPartitions   bool // -f2
@@ -81,7 +78,7 @@ func (u *stdUI) Confirm(prompt string) (bool, error) {
 
 // Run is the main entrypoint for the CLI.
 //
-// It validates arguments and, in dry-run mode, prints the planned clone
+// It validates arguments and, in plan mode, prints the planned clone
 // operations without touching any disks. When no destination is given
 // it will start an interactive wizard to help the user choose safe options.
 func Run(args []string) error {
@@ -130,69 +127,62 @@ func run(args []string, ui UI) error {
 		return err
 	}
 
-	if opts.Execute {
-		if os.Getenv("KLON_ALLOW_WRITE") != "1" {
-			return fmt.Errorf("execute mode is protected; set KLON_ALLOW_WRITE=1 to enable")
-		}
-		if err := clone.ValidateCloneSafety(plan, planOpts); err != nil {
-			return err
-		}
+	// Always plan first: show the plan (unless quiet), write a state log, and
+	// then optionally apply after confirmation.
+	steps := clone.BuildExecutionSteps(plan, planOpts)
 
-		// Decide confirmation behaviour based on quiet/unattended flags.
-		askConfirm := true
-		if opts.Quiet {
-			askConfirm = false
-		} else if opts.UnattendedInit && opts.Initialize {
-			askConfirm = false
-		} else if opts.Unattended && !opts.Initialize {
-			askConfirm = false
-		}
+	_ = clone.AppendStateLog("kln.state", plan, planOpts, steps, "PLAN", nil)
 
-		if !opts.Quiet {
-			ui.Println(plan.String())
-			ui.Println("Planned execution steps:")
-			steps := clone.BuildExecutionSteps(plan, planOpts)
-			for _, step := range steps {
-				ui.Println("  -", step.Operation, ":", step.Description)
-			}
-		}
-
-		if askConfirm {
-			ok, err := ui.Confirm("Proceed with executing these steps on the destination disk?")
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return fmt.Errorf("execution cancelled by user")
-			}
-		}
-
-		runner := clone.NewCommandRunner(opts.DestRoot, opts.PartitionStrategy, planOpts.ExcludePatterns, planOpts.ExcludeFromFiles)
-		if err := clone.Execute(plan, planOpts, runner); err != nil {
-			return err
-		}
-
-		if err := clone.AdjustSystem(plan, planOpts, opts.DestRoot); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	if opts.DryRun {
+	if !opts.Quiet {
 		ui.Println(plan.String())
 
 		if opts.Verbose {
 			ui.Println("Planned execution steps:")
-			steps := clone.BuildExecutionSteps(plan, planOpts)
 			for _, step := range steps {
-				ui.Println("  -", step.Description)
+				ui.Println("  -", step.Operation, ":", step.Description)
 			}
 		}
-
-		return nil
 	}
 
-	return fmt.Errorf("non-dry-run mode is not implemented yet")
+	if err := clone.ValidateCloneSafety(plan, planOpts); err != nil {
+		return err
+	}
+
+	// Decide confirmation behaviour based on quiet/unattended flags.
+	askConfirm := true
+	if opts.Quiet {
+		askConfirm = false
+	} else if opts.UnattendedInit && opts.Initialize {
+		askConfirm = false
+	} else if opts.Unattended && !opts.Initialize {
+		askConfirm = false
+	}
+
+	if askConfirm {
+		ok, err := ui.Confirm("Apply these changes to the destination disk?")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("apply cancelled by user")
+		}
+	}
+
+	runner := clone.NewCommandRunner(opts.DestRoot, opts.PartitionStrategy, planOpts.ExcludePatterns, planOpts.ExcludeFromFiles, opts.Destination)
+	if err := clone.Apply(plan, planOpts, runner); err != nil {
+		_ = clone.AppendStateLog("kln.state", plan, planOpts, steps, "APPLY_FAILED", err)
+		return err
+	}
+
+	if err := clone.AdjustSystem(plan, planOpts, opts.DestRoot); err != nil {
+		_ = clone.AppendStateLog("kln.state", plan, planOpts, steps, "APPLY_FAILED", err)
+		return err
+	}
+
+	_ = clone.AppendStateLog("kln.state", plan, planOpts, steps, "APPLY_SUCCESS", nil)
+
+	ui.Println(plan.String())
+	return nil
 }
 
 // parseFlags parses command-line flags into Options and returns the remaining
@@ -200,15 +190,12 @@ func run(args []string, ui UI) error {
 func parseFlags(args []string) (Options, []string, error) {
 	fs := flag.NewFlagSet("klon", flag.ContinueOnError)
 	opts := Options{
-		DryRun:   true,
 		DestRoot: "/mnt/clone",
 	}
 	var excludeList string
 	var excludeFromList string
 
-	fs.BoolVar(&opts.DryRun, "dry-run", true, "show what would be cloned without making changes")
-	fs.BoolVar(&opts.Execute, "execute", false, "execute planned steps (requires KLON_ALLOW_WRITE=1)")
-	fs.StringVar(&opts.DestRoot, "dest-root", "/mnt/clone", "destination root mountpoint for clone (for execute/logging)")
+	fs.StringVar(&opts.DestRoot, "dest-root", "/mnt/clone", "destination root mountpoint for clone")
 
 	fs.BoolVar(&opts.Initialize, "f", false, "force initialize destination partition table from source disk")
 	fs.BoolVar(&opts.ForceTwoPartitions, "f2", false, "force initialize only the first two partitions")
@@ -252,10 +239,10 @@ func parseFlags(args []string) (Options, []string, error) {
 // interactiveWizard asks a minimal set of questions to obtain safe defaults
 // for a clone run. For now, it asks for a destination disk and whether the
 // user wants to initialize the destination (like -f / -f2), and always
-// runs in dry-run mode.
+// runs in plan mode (no writes).
 func interactiveWizard(ui UI) (Options, error) {
 	ui.Println("Welcome to Klon interactive mode.")
-	ui.Println("For now, Klon will only compute and display a clone plan (dry-run).")
+	ui.Println("For now, Klon will only compute and display a clone plan (no writes).")
 
 	dest, err := ui.Ask("Destination disk (e.g. sda, nvme0n1): ")
 	if err != nil {
@@ -306,7 +293,6 @@ func interactiveWizard(ui UI) (Options, error) {
 
 	return Options{
 		Destination:        dest,
-		DryRun:             true,
 		Initialize:         init,
 		ForceTwoPartitions: forceTwo,
 		PartitionStrategy:  strategy,

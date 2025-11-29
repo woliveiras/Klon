@@ -18,18 +18,28 @@ type CommandRunner struct {
 	PartitionStrategy string
 	ExcludePatterns   []string
 	ExcludeFromFiles  []string
+	DestDisk          string
 }
 
-func NewCommandRunner(destRoot, strategy string, excludePatterns, excludeFromFiles []string) *CommandRunner {
+func NewCommandRunner(destRoot, strategy string, excludePatterns, excludeFromFiles []string, destDisk string) *CommandRunner {
 	return &CommandRunner{
 		DestRoot:          destRoot,
 		PartitionStrategy: strategy,
 		ExcludePatterns:   excludePatterns,
 		ExcludeFromFiles:  excludeFromFiles,
+		DestDisk:          ensureDevPrefix(destDisk),
 	}
 }
 
 func (r *CommandRunner) Run(step ExecutionStep) error {
+	if step.DestinationDisk != "" {
+		expected := r.DestDisk
+		actual := ensureDevPrefix(step.DestinationDisk)
+		if expected != "" && actual != expected {
+			return fmt.Errorf("refusing to run %q step on unexpected destination %s (expected %s)", step.Operation, actual, expected)
+		}
+	}
+
 	switch step.Operation {
 	case "prepare-disk":
 		return r.runPrepareDisk(step)
@@ -46,14 +56,14 @@ func (r *CommandRunner) Run(step ExecutionStep) error {
 func (r *CommandRunner) runPrepareDisk(step ExecutionStep) error {
 	cmdStr, err := BuildPartitionCommand(step, r.PartitionStrategy)
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare-disk on %s: %w", step.DestinationDisk, err)
 	}
 	return runShellCommand(cmdStr)
 }
 
 func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 	if r.DestRoot == "" {
-		return fmt.Errorf("sync-filesystem: dest root is empty")
+		return fmt.Errorf("sync-filesystem on %s: dest root is empty", step.DestinationDisk)
 	}
 	if step.Mountpoint == "" {
 		log.Printf("klon: skipping sync-filesystem for %s: empty mountpoint", step.SourceDevice)
@@ -67,13 +77,13 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 	}
 
 	if err := os.MkdirAll(destPath, 0o755); err != nil {
-		return fmt.Errorf("sync-filesystem: cannot create destination dir %s: %w", destPath, err)
+		return fmt.Errorf("sync-filesystem on %s: cannot create destination dir %s: %w", step.DestinationDisk, destPath, err)
 	}
 
 	dstPart := partitionDevice(step.DestinationDisk, step.PartitionIndex)
 	mountCmd := fmt.Sprintf("mount %s %s", dstPart, destPath)
 	if err := runShellCommand(mountCmd); err != nil {
-		return fmt.Errorf("sync-filesystem: mount failed for %s on %s: %w", dstPart, destPath, err)
+		return fmt.Errorf("sync-filesystem on %s: mount failed for %s on %s: %w", step.DestinationDisk, dstPart, destPath, err)
 	}
 	defer func() {
 		umountCmd := fmt.Sprintf("umount %s", destPath)
@@ -84,22 +94,22 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 
 	cmdStr, err := BuildSyncCommand(step, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles)
 	if err != nil {
-		return err
+		return fmt.Errorf("sync-filesystem on %s: cannot build rsync command: %w", step.DestinationDisk, err)
 	}
 	return runShellCommand(cmdStr)
 }
 
 func (r *CommandRunner) runInitializePartition(step ExecutionStep) error {
 	if step.SourceDevice == "" || step.DestinationDisk == "" || step.PartitionIndex <= 0 {
-		return fmt.Errorf("initialize-partition: missing source, destination or partition index")
+		return fmt.Errorf("initialize-partition on %s: missing source, destination or partition index", step.DestinationDisk)
 	}
 
 	srcFs, err := detectFilesystem(step.SourceDevice)
 	if err != nil {
-		return fmt.Errorf("initialize-partition: cannot detect filesystem: %w", err)
+		return fmt.Errorf("initialize-partition on %s: cannot detect filesystem for %s: %w", step.DestinationDisk, step.SourceDevice, err)
 	}
 	if srcFs == "" {
-		return fmt.Errorf("initialize-partition: empty filesystem type for %s", step.SourceDevice)
+		return fmt.Errorf("initialize-partition on %s: empty filesystem type for %s", step.DestinationDisk, step.SourceDevice)
 	}
 
 	dstPart := partitionDevice(step.DestinationDisk, step.PartitionIndex)

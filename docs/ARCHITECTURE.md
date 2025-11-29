@@ -25,13 +25,13 @@ There are two primary usage styles:
      - `sudo klon nvme0n1 -f`
    - `main.go` forwards `os.Args` to `cli.Run`.
    - `pkg/cli.Run`:
-     - Parses flags (e.g. `-dry-run`, `-f`, `-q`, `--execute`, etc.).
+     - Parses flags (e.g. `-f`, `-q`, `--apply`, etc.).
      - Validates the destination device argument.
      - Calls `clone.Plan(opts)` to build a clone plan.
-     - In dry-run mode, prints the plan (and optionally the execution steps).
-     - In `--execute` mode, performs safety checks, shows a summary, asks for
+     - In plan mode, prints the plan (and optionally the execution steps).
+     - In `--apply` mode, performs safety checks, shows a summary, asks for
        confirmation (depending on quiet/unattended flags), then calls
-       `clone.Execute(plan, opts, runner)`.
+       `clone.Apply(plan, opts, runner)`.
    - `pkg/clone` inspects the system and builds a safe, high-level plan of
      partitions and actions before anything is modified on disk, and can also
      execute that plan via a `Runner` implementation.
@@ -53,8 +53,8 @@ There are two primary usage styles:
        would receive.
      - Calls `clone.Plan(...)` to compute a plan.
      - Shows a summary of the plan and asks for final confirmation before
-       executing anything destructive.
-     - On confirmation, calls `clone.Execute(...)`.
+       applying anything destructive.
+     - On confirmation, calls `clone.Apply(...)`.
 
 Both modes should share the same core domain logic in `pkg/clone`; only how
 options are gathered differs (flags vs. questions).
@@ -110,8 +110,8 @@ Responsibilities:
 
 - Represent the domain: disks, partitions, and clone plans.
 - Provide `Plan(opts PlanOptions)` to compute a safe plan.
-- Provide `BuildExecutionSteps(plan, opts)` and `Execute(plan, opts, runner)`
-  to describe and (eventually) perform the actual clone.
+- Provide `BuildExecutionSteps(plan, opts)` and `Apply(plan, opts, runner)`
+  to describe and perform the actual clone.
 - Encapsulate system interactions needed to:
   - Discover the booted (source) disk and its partitions.
   - Discover the destination disk and its partitions.
@@ -162,10 +162,9 @@ Execution:
     `"initialize-partition"`.
 - `Runner` interface – abstracts how steps are actually performed:
   - `Run(step ExecutionStep) error`.
-- `Execute(plan, opts, runner)` – iterates over the steps and delegates to
+- `Apply(plan, opts, runner)` – iterates over the steps and delegates to
   the `Runner`.
-  - The CLI wires a **CommandRunner** when `--execute` is used (and
-    `KLON_ALLOW_WRITE=1` is set) that:
+  - The CLI wires a **CommandRunner** when applying a plan that:
     - For `"prepare-disk"` operations:
       - Uses `sfdisk -d <source> | sfdisk <dest>` to clone the partition
         table when the strategy is `clone-table`.
@@ -181,7 +180,7 @@ Execution:
       - Unmounts the destination partition afterwards, logging any failure.
     - Logs all executed commands and their output using the standard `log`
       package, so runs are auditable.
-  - Other `Runner` implementations (e.g. pure logging or dry-run runners)
+  - Other `Runner` implementations (e.g. pure logging or plan-only runners)
     can be plugged in for testing or alternative front-ends.
 
 ## Test-Driven Development (TDD)
