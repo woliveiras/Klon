@@ -121,35 +121,126 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 	// progress (especially for large clones).
 	_ = runShellCommand(fmt.Sprintf("df -h %s", destPath))
 
-	cmdStr, err := BuildSyncCommand(step, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles)
-	if err != nil {
-		return fmt.Errorf("sync-filesystem on %s: cannot build rsync command: %w", step.DestinationDisk, err)
-	}
-
-	log.Printf("klon: EXEC: %s", cmdStr)
-	cmd := exec.Command("sh", "-c", cmdStr)
-	out, err := cmd.CombinedOutput()
-	if len(out) > 0 {
-		log.Printf("klon: OUTPUT: %s", strings.TrimSpace(string(out)))
-	}
-	if err != nil {
-		// rsync exit code 23 is very common when cloning a live root
-		// filesystem because of ephemeral/virtual files under /sys, /proc,
-		// etc. For the root mountpoint we treat this as a warning, not a
-		// hard failure, so the clone can still succeed.
-		if step.Mountpoint == "/" {
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.ExitStatus() == 23 {
-					log.Printf("klon: WARNING: rsync for root exited with code 23 (partial transfer, usually due to live /proc or /sys). Continuing.")
-					return nil
-				}
-			}
+	if step.Mountpoint == "/" {
+		if err := r.runParallelRootSync(destPath); err != nil {
+			return err
 		}
-		return fmt.Errorf("command failed: %w", err)
+	} else {
+		cmdStr, err := BuildSyncCommand(step, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles)
+		if err != nil {
+			return fmt.Errorf("sync-filesystem on %s: cannot build rsync command: %w", step.DestinationDisk, err)
+		}
+
+		log.Printf("klon: EXEC: %s", cmdStr)
+		cmd := exec.Command("sh", "-c", cmdStr)
+		out, err := cmd.CombinedOutput()
+		if len(out) > 0 {
+			log.Printf("klon: OUTPUT: %s", strings.TrimSpace(string(out)))
+		}
+		if err != nil {
+			return fmt.Errorf("command failed: %w", err)
+		}
 	}
 
 	// Show destination filesystem usage after syncing.
 	_ = runShellCommand(fmt.Sprintf("df -h %s", destPath))
+	return nil
+}
+
+// runParallelRootSync performs the root filesystem synchronization using
+// multiple rsync processes in parallel for selected subtrees (like /usr, /var,
+// /home, /opt) plus a final pass for the remaining tree. This is an
+// optimization for large clones.
+func (r *CommandRunner) runParallelRootSync(destRoot string) error {
+	type job struct {
+		name string
+		src  string
+		dst  string
+	}
+
+	subtrees := []job{
+		{name: "usr", src: "/usr/", dst: filepath.Join(destRoot, "usr") + "/"},
+		{name: "var", src: "/var/", dst: filepath.Join(destRoot, "var") + "/"},
+		{name: "home", src: "/home/", dst: filepath.Join(destRoot, "home") + "/"},
+		{name: "opt", src: "/opt/", dst: filepath.Join(destRoot, "opt") + "/"},
+	}
+
+	baseStep := ExecutionStep{
+		Operation:  "sync-filesystem",
+		Mountpoint: "/",
+	}
+
+	// Build the base rsync command for root, then adapt it per subtree.
+	baseCmd, err := BuildSyncCommand(baseStep, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles)
+	if err != nil {
+		return fmt.Errorf("parallel root sync: cannot build base rsync command: %w", err)
+	}
+
+	// baseCmd looks like: rsync <args> / <destRoot>/
+	parts := strings.Fields(baseCmd)
+	if len(parts) < 4 {
+		return fmt.Errorf("parallel root sync: unexpected rsync command format: %q", baseCmd)
+	}
+	args := parts[1 : len(parts)-2] // drop "rsync" and the last two path args
+
+	// Exclude subtrees from the final "rest" pass so they are not copied twice.
+	for _, st := range subtrees {
+		args = append(args, "--exclude", st.src)
+	}
+
+	// rsync jobs for subtrees.
+	var cmds []*exec.Cmd
+	for _, st := range subtrees {
+		cmdArgs := append([]string{}, args...)
+		cmdArgs = append(cmdArgs, st.src, st.dst)
+		cmd := exec.Command("rsync", cmdArgs...)
+		cmds = append(cmds, cmd)
+		log.Printf("klon: EXEC: rsync %s", strings.Join(cmdArgs, " "))
+	}
+
+	// Final job for the rest of the filesystem (/ → destRoot).
+	restArgs := append([]string{}, args...)
+	restArgs = append(restArgs, "/", destRoot+"/")
+	restCmd := exec.Command("rsync", restArgs...)
+	log.Printf("klon: EXEC: rsync %s", strings.Join(restArgs, " "))
+
+	// Run subtree jobs in parallel with a small concurrency limit to avoid
+	// overloading the SD card.
+	errCh := make(chan error, len(cmds)+1)
+	sem := make(chan struct{}, 2) // at most 2 rsyncs in parallel
+
+	runCmd := func(cmd *exec.Cmd) {
+		sem <- struct{}{}
+		defer func() { <-sem }()
+		out, err := cmd.CombinedOutput()
+		if len(out) > 0 {
+			log.Printf("klon: OUTPUT: %s", strings.TrimSpace(string(out)))
+		}
+		if err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.ExitStatus() == 23 {
+					log.Printf("klon: WARNING: rsync exited with code 23 for command %q (partial transfer, usually due to live /proc or /sys). Continuing.", cmd.String())
+					errCh <- nil
+					return
+				}
+			}
+			errCh <- fmt.Errorf("command failed: %w", err)
+			return
+		}
+		errCh <- nil
+	}
+
+	for _, c := range cmds {
+		go runCmd(c)
+	}
+	go runCmd(restCmd)
+
+	// Wait for all jobs.
+	for i := 0; i < len(cmds)+1; i++ {
+		if e := <-errCh; e != nil {
+			return e
+		}
+	}
 	return nil
 }
 
