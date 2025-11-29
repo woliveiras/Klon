@@ -17,6 +17,14 @@ func AppendStateLog(path string, plan PlanResult, opts PlanOptions, steps []Exec
 	}
 	defer f.Close()
 
+	info, statErr := f.Stat()
+	if statErr == nil && info.Size() == 0 {
+		header := "# Klon state log - each section describes a plan/apply run. Newest entries are at the bottom.\n\n"
+		if _, err := f.WriteString(header); err != nil {
+			return err
+		}
+	}
+
 	now := time.Now().UTC().Format(time.RFC3339)
 	var b strings.Builder
 
@@ -43,4 +51,3 @@ func AppendStateLog(path string, plan PlanResult, opts PlanOptions, steps []Exec
 	_, writeErr := f.WriteString(b.String())
 	return writeErr
 }
-

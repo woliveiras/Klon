@@ -173,7 +173,16 @@ func run(args []string, ui UI) error {
 	}
 
 	if askConfirm {
-		ok, err := ui.Confirm("Apply these changes to the destination disk?")
+		destDev := opts.Destination
+		if !strings.HasPrefix(destDev, "/dev/") {
+			destDev = "/dev/" + destDev
+		}
+		msg := fmt.Sprintf(
+			"About to ERASE ALL DATA on %s by cloning from %s. Proceed?",
+			destDev,
+			plan.SourceDisk,
+		)
+		ok, err := ui.Confirm(msg)
 		if err != nil {
 			return err
 		}
