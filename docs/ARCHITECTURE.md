@@ -106,8 +106,9 @@ To keep the code testable while supporting an interactive wizard:
 Responsibilities:
 
 - Represent the domain: disks, partitions, and clone plans.
-- Provide `Plan(destination string)` to compute a safe plan.
-- Eventually provide an `Execute(plan PlanResult)` to perform the actual clone.
+- Provide `Plan(opts PlanOptions)` to compute a safe plan.
+- Provide `BuildExecutionSteps(plan, opts)` and `Execute(plan, opts, runner)`
+  to describe and (eventually) perform the actual clone.
 - Encapsulate system interactions needed to:
   - Discover the booted (source) disk and its partitions.
   - Discover the destination disk and its partitions.
@@ -116,6 +117,45 @@ Responsibilities:
 Non-responsibilities:
 
 - Parsing CLI flags or printing help/usage.
+
+#### System abstraction
+
+The `System` interface describes how Gopi discovers information about the
+running system:
+
+- `BootDisk() (string, error)` – returns the device that backs `/` (e.g. `/dev/mmcblk0p2`).
+- `MountedPartitions(disk string) ([]MountedPartition, error)` – returns the
+  list of mounted partitions belonging to a given disk (e.g. `/dev/mmcblk0`).
+
+The default implementation, `NewLocalSystem`, uses `/proc/self/mounts` on
+Linux/Raspberry Pi. Tests use fake implementations to keep behaviour
+deterministic and safe.
+
+#### Planning vs execution
+
+Planning:
+
+- `PlanOptions` – high-level clone configuration coming from the CLI.
+- `Plan` / `PlanWithSystem`:
+  - Detect the boot disk and its mounted partitions.
+  - Build a `PlanResult` that lists:
+    - `SourceDisk`, `DestinationDisk`.
+    - `Partitions` with device, mountpoint, and an `Action` such as:
+      - `"sync"` – sync an existing file system.
+      - `"initialize+sync"` – re-initialize partition(s) then sync
+        (inspired by `rpi-clone -f` / `-f2`).
+
+Execution:
+
+- `ExecutionStep` – human-readable description of a concrete action
+  (e.g. `"initialize+sync from /dev/mmcblk0p1 to sda (partition 1) mounted on /boot"`).
+- `BuildExecutionSteps(plan, opts)` – converts a `PlanResult` into a list of
+  `ExecutionStep` values.
+- `Runner` interface – abstracts how steps are actually performed:
+  - `Run(step ExecutionStep) error`.
+- `Execute(plan, opts, runner)` – iterates over the steps and delegates to
+  the `Runner`. At this stage, only a fake/logging runner is expected; actual
+  disk writes will be implemented later behind this interface.
 
 ## Test-Driven Development (TDD)
 
