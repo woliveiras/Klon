@@ -159,7 +159,8 @@ func parseFlags(args []string) (Options, []string, error) {
 }
 
 // interactiveWizard asks a minimal set of questions to obtain safe defaults
-// for a clone run. For now, it only asks for a destination disk and always
+// for a clone run. For now, it asks for a destination disk and whether the
+// user wants to initialize the destination like rpi-clone -f / -f2, and always
 // runs in dry-run mode.
 func interactiveWizard(ui UI) (Options, error) {
 	ui.Println("Welcome to gopi interactive mode.")
@@ -182,8 +183,23 @@ func interactiveWizard(ui UI) (Options, error) {
 		return Options{}, fmt.Errorf("interactive clone cancelled by user")
 	}
 
+	init, err := ui.Confirm("Initialize destination partition table like -f?")
+	if err != nil {
+		return Options{}, err
+	}
+
+	forceTwo := false
+	if init {
+		forceTwo, err = ui.Confirm("Initialize only the first two partitions like -f2?")
+		if err != nil {
+			return Options{}, err
+		}
+	}
+
 	return Options{
-		Destination: dest,
-		DryRun:      true,
+		Destination:        dest,
+		DryRun:             true,
+		Initialize:         init,
+		ForceTwoPartitions: forceTwo,
 	}, nil
 }

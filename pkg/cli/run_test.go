@@ -45,7 +45,7 @@ func (f *fakeUI) Confirm(prompt string) (bool, error) {
 func TestRun_NoDestinationUsesInteractiveWizard(t *testing.T) {
 	ui := &fakeUI{
 		askResponses:     []string{"sda"},
-		confirmResponses: []bool{true},
+		confirmResponses: []bool{true, false, false},
 	}
 
 	err := run([]string{"gopi"}, ui)
@@ -99,6 +99,27 @@ func TestInteractiveWizard_CancelledByUser(t *testing.T) {
 	}
 }
 
+func TestInteractiveWizard_SetsInitializeFlags(t *testing.T) {
+	ui := &fakeUI{
+		askResponses:     []string{"sda"},
+		confirmResponses: []bool{true, true, true},
+	}
+
+	opts, err := interactiveWizard(ui)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if opts.Destination != "sda" {
+		t.Fatalf("expected destination 'sda', got %q", opts.Destination)
+	}
+	if !opts.Initialize {
+		t.Fatalf("expected Initialize to be true")
+	}
+	if !opts.ForceTwoPartitions {
+		t.Fatalf("expected ForceTwoPartitions to be true")
+	}
+}
+
 func TestParseFlags_ParsesCoreOptions(t *testing.T) {
 	opts, rest, err := parseFlags([]string{"gopi", "-f", "-f2", "-q", "-u", "-U", "-v", "sda"})
 	if err != nil {
@@ -127,4 +148,3 @@ func TestParseFlags_ParsesCoreOptions(t *testing.T) {
 		t.Fatalf("expected Verbose to be true")
 	}
 }
-
