@@ -104,6 +104,10 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 		}
 	}()
 
+	// Show destination filesystem usage before syncing so the user can see
+	// progress (especially for large clones).
+	_ = runShellCommand(fmt.Sprintf("df -h %s", destPath))
+
 	cmdStr, err := BuildSyncCommand(step, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles)
 	if err != nil {
 		return fmt.Errorf("sync-filesystem on %s: cannot build rsync command: %w", step.DestinationDisk, err)
@@ -130,6 +134,9 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 		}
 		return fmt.Errorf("command failed: %w", err)
 	}
+
+	// Show destination filesystem usage after syncing.
+	_ = runShellCommand(fmt.Sprintf("df -h %s", destPath))
 	return nil
 }
 

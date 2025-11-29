@@ -131,7 +131,7 @@ func TestInteractiveWizard_CancelledByUser(t *testing.T) {
 func TestInteractiveWizard_SetsInitializeFlags(t *testing.T) {
 	ui := &fakeUI{
 		askResponses:     []string{"sda", "c"},
-		confirmResponses: []bool{true, true, true},
+		confirmResponses: []bool{true, true, true, true},
 	}
 
 	opts, err := interactiveWizard(ui)
@@ -150,12 +150,15 @@ func TestInteractiveWizard_SetsInitializeFlags(t *testing.T) {
 	if opts.PartitionStrategy != "clone-table" {
 		t.Fatalf("expected PartitionStrategy 'clone-table', got %q", opts.PartitionStrategy)
 	}
+	if !opts.ExpandLastPartition {
+		t.Fatalf("expected ExpandLastPartition to be true")
+	}
 }
 
 func TestInteractiveWizard_NewLayoutStrategy(t *testing.T) {
 	ui := &fakeUI{
 		askResponses:     []string{"sda", "n"},
-		confirmResponses: []bool{true, true, true},
+		confirmResponses: []bool{true, true, false},
 	}
 
 	opts, err := interactiveWizard(ui)
@@ -165,10 +168,13 @@ func TestInteractiveWizard_NewLayoutStrategy(t *testing.T) {
 	if opts.PartitionStrategy != "new-layout" {
 		t.Fatalf("expected PartitionStrategy 'new-layout', got %q", opts.PartitionStrategy)
 	}
+	if opts.ExpandLastPartition {
+		t.Fatalf("expected ExpandLastPartition to be false")
+	}
 }
 
 func TestParseFlags_ParsesCoreOptions(t *testing.T) {
-	opts, rest, err := parseFlags([]string{"klon", "-f", "-f2", "-q", "-u", "-U", "-v", "--auto-approve", "--dest-root", "/custom/clone", "sda"})
+	opts, rest, err := parseFlags([]string{"klon", "-f", "-f2", "-q", "-u", "-U", "-v", "--auto-approve", "--expand-root", "--dest-root", "/custom/clone", "sda"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -196,6 +202,9 @@ func TestParseFlags_ParsesCoreOptions(t *testing.T) {
 	}
 	if !opts.AutoApprove {
 		t.Fatalf("expected AutoApprove to be true")
+	}
+	if !opts.ExpandLastPartition {
+		t.Fatalf("expected ExpandLastPartition to be true")
 	}
 	if opts.DestRoot != "/custom/clone" {
 		t.Fatalf("expected DestRoot to be /custom/clone, got %q", opts.DestRoot)
