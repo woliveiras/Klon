@@ -99,3 +99,32 @@ func TestInteractiveWizard_CancelledByUser(t *testing.T) {
 	}
 }
 
+func TestParseFlags_ParsesCoreOptions(t *testing.T) {
+	opts, rest, err := parseFlags([]string{"gopi", "-f", "-f2", "-q", "-u", "-U", "-v", "sda"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(rest) != 1 || rest[0] != "sda" {
+		t.Fatalf("expected destination arg 'sda' in rest, got %#v", rest)
+	}
+	if !opts.Initialize {
+		t.Fatalf("expected Initialize to be true")
+	}
+	if !opts.ForceTwoPartitions {
+		t.Fatalf("expected ForceTwoPartitions to be true")
+	}
+	if !opts.Quiet {
+		t.Fatalf("expected Quiet to be true")
+	}
+	if !opts.Unattended {
+		t.Fatalf("expected Unattended to be true (due to -q)")
+	}
+	if !opts.UnattendedInit {
+		t.Fatalf("expected UnattendedInit to be true")
+	}
+	if !opts.Verbose {
+		t.Fatalf("expected Verbose to be true")
+	}
+}
+

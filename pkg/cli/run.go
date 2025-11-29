@@ -92,18 +92,11 @@ func run(args []string, ui UI) error {
 		return fmt.Errorf("no arguments provided")
 	}
 
-	fs := flag.NewFlagSet("gopi", flag.ContinueOnError)
-	opts := Options{
-		DryRun: true,
-	}
-
-	fs.BoolVar(&opts.DryRun, "dry-run", true, "show what would be cloned without making changes")
-
-	if err := fs.Parse(args[1:]); err != nil {
+	opts, rest, err := parseFlags(args)
+	if err != nil {
 		return err
 	}
 
-	rest := fs.Args()
 	if len(rest) < 1 {
 		// No destination given: start interactive wizard.
 		wizardOpts, err := interactiveWizard(ui)
@@ -116,7 +109,13 @@ func run(args []string, ui UI) error {
 	}
 
 	plan, err := clone.Plan(clone.PlanOptions{
-		Destination: opts.Destination,
+		Destination:        opts.Destination,
+		Initialize:         opts.Initialize,
+		ForceTwoPartitions: opts.ForceTwoPartitions,
+		Quiet:              opts.Quiet,
+		Unattended:         opts.Unattended,
+		UnattendedInit:     opts.UnattendedInit,
+		Verbose:            opts.Verbose,
 	})
 	if err != nil {
 		return err
@@ -128,6 +127,35 @@ func run(args []string, ui UI) error {
 	}
 
 	return fmt.Errorf("non-dry-run mode is not implemented yet")
+}
+
+// parseFlags parses command-line flags into Options and returns the remaining
+// non-flag arguments (typically the destination disk).
+func parseFlags(args []string) (Options, []string, error) {
+	fs := flag.NewFlagSet("gopi", flag.ContinueOnError)
+	opts := Options{
+		DryRun: true,
+	}
+
+	fs.BoolVar(&opts.DryRun, "dry-run", true, "show what would be cloned without making changes")
+
+	fs.BoolVar(&opts.Initialize, "f", false, "force initialize destination partition table from source disk")
+	fs.BoolVar(&opts.ForceTwoPartitions, "f2", false, "force initialize only the first two partitions")
+	fs.BoolVar(&opts.Quiet, "q", false, "quiet mode (implies unattended)")
+	fs.BoolVar(&opts.Unattended, "u", false, "unattended clone if not initializing")
+	fs.BoolVar(&opts.UnattendedInit, "U", false, "unattended even if initializing")
+	fs.BoolVar(&opts.Verbose, "v", false, "verbose mode")
+
+	if err := fs.Parse(args[1:]); err != nil {
+		return Options{}, nil, err
+	}
+
+	// Apply implied semantics similar to rpi-clone.
+	if opts.Quiet {
+		opts.Unattended = true
+	}
+
+	return opts, fs.Args(), nil
 }
 
 // interactiveWizard asks a minimal set of questions to obtain safe defaults

@@ -5,7 +5,13 @@ import "fmt"
 // PlanOptions represents the inputs required to compute a clone plan.
 // It mirrors, at a high level, the user-facing options parsed by the CLI.
 type PlanOptions struct {
-	Destination string
+	Destination        string
+	Initialize         bool
+	ForceTwoPartitions bool
+	Quiet              bool
+	Unattended         bool
+	UnattendedInit     bool
+	Verbose            bool
 }
 
 // System abstracts how we discover information about disks and partitions
