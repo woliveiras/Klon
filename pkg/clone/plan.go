@@ -1,6 +1,10 @@
 package clone
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 // PlanOptions represents the inputs required to compute a clone plan.
 // It mirrors, at a high level, the user-facing options parsed by the CLI.
@@ -79,8 +83,14 @@ func PlanWithSystem(sys System, opts PlanOptions) (PlanResult, error) {
 
 	var planParts []PartitionPlan
 	for idx, p := range parts {
+		index := idx + 1
+		if p.Device != "" {
+			if n := partitionIndexFromDevice(p.Device); n > 0 {
+				index = n
+			}
+		}
 		planParts = append(planParts, PartitionPlan{
-			Index:      idx + 1,
+			Index:      index,
 			Device:     p.Device,
 			Mountpoint: p.Mountpoint,
 			Action:     "sync",
@@ -140,4 +150,36 @@ func (p PlanResult) String() string {
 		out += fmt.Sprintf("  - %s: %s\n", label, part.Action)
 	}
 	return out
+}
+
+// partitionIndexFromDevice extracts the numeric partition index from a device
+// path such as "/dev/mmcblk0p2" or "/dev/sda1". It returns 0 if it cannot
+// determine a partition number.
+func partitionIndexFromDevice(dev string) int {
+	name := strings.TrimPrefix(dev, "/dev/")
+	if name == "" {
+		return 0
+	}
+
+	// mmcblk0p2, nvme0n1p3 style: use the suffix after the last 'p'.
+	if idx := strings.LastIndex(name, "p"); idx != -1 && idx < len(name)-1 {
+		if n, err := strconv.Atoi(name[idx+1:]); err == nil {
+			return n
+		}
+	}
+
+	// sda1, sdb2 style: take trailing digits.
+	end := len(name) - 1
+	start := end
+	for start >= 0 && name[start] >= '0' && name[start] <= '9' {
+		start--
+	}
+	if start == end {
+		return 0
+	}
+	part := name[start+1:]
+	if n, err := strconv.Atoi(part); err == nil {
+		return n
+	}
+	return 0
 }

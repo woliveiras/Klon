@@ -146,6 +146,13 @@ Planning:
     - `Partitions` with device, mountpoint, and an `Action` such as:
       - `"sync"` – sync an existing file system.
       - `"initialize+sync"` – re-initialize partition(s) then sync.
+  - The logical partition index in the plan (`PartitionPlan.Index`) is derived
+    from the device name when possible:
+    - `/dev/mmcblk0p1` → index 1, `/dev/mmcblk0p2` → index 2.
+    - `/dev/sda1` → index 1, `/dev/sda2` → index 2.
+    - This ensures that, when applying the plan, `/dev/mmcblk0p2` (root) is
+      mapped to partition 2 on the destination and `/dev/mmcblk0p1` (boot) to
+      partition 1, avoiding root being cloned into a small boot partition.
 
 Execution:
 

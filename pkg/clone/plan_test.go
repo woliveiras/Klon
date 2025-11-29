@@ -89,10 +89,10 @@ func TestPlanWithSystem_UsesMountedPartitions(t *testing.T) {
 	if len(plan.Partitions) != 2 {
 		t.Fatalf("expected 2 partitions in plan, got %d", len(plan.Partitions))
 	}
-	if plan.Partitions[0].Device != "/dev/mmcblk0p1" || plan.Partitions[0].Mountpoint != "/boot" {
+	if plan.Partitions[0].Device != "/dev/mmcblk0p1" || plan.Partitions[0].Mountpoint != "/boot" || plan.Partitions[0].Index != 1 {
 		t.Fatalf("unexpected first partition in plan: %+v", plan.Partitions[0])
 	}
-	if plan.Partitions[1].Device != "/dev/mmcblk0p2" || plan.Partitions[1].Mountpoint != "/" {
+	if plan.Partitions[1].Device != "/dev/mmcblk0p2" || plan.Partitions[1].Mountpoint != "/" || plan.Partitions[1].Index != 2 {
 		t.Fatalf("unexpected second partition in plan: %+v", plan.Partitions[1])
 	}
 }
@@ -122,7 +122,6 @@ func TestPlanResult_StringIncludesDeviceAndMountpoint(t *testing.T) {
 		t.Fatalf("expected output to contain action, got: %q", out)
 	}
 }
-
 
 func TestPlanWithSystem_InitializeMarksActions(t *testing.T) {
 	sys := fakeSystem{
