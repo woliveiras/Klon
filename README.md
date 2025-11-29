@@ -93,6 +93,7 @@ Use this only with a destination disk you are prepared to completely overwrite.
 - `--exclude` – extra patterns to exclude from `rsync` (comma-separated list).
 - `--exclude-from` – list of files with `rsync` exclude patterns (comma-separated).
 - `--hostname` – sets the hostname in the cloned system (adjusts `/etc/hostname` and `/etc/hosts`).
+ - `--expand-root` – after cloning the partition table, grow the last data partition on the destination disk (usually the root filesystem) to use all remaining free space.
 
 ## Development
 

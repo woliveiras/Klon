@@ -44,6 +44,8 @@ func (r *CommandRunner) Run(step ExecutionStep) error {
 	switch step.Operation {
 	case "prepare-disk":
 		return r.runPrepareDisk(step)
+	case "grow-partition":
+		return r.runGrowPartition(step)
 	case "initialize-partition":
 		return r.runInitializePartition(step)
 	case "sync-filesystem":
@@ -59,6 +61,15 @@ func (r *CommandRunner) runPrepareDisk(step ExecutionStep) error {
 	if err != nil {
 		return fmt.Errorf("prepare-disk on %s: %w", step.DestinationDisk, err)
 	}
+	return runShellCommand(cmdStr)
+}
+
+func (r *CommandRunner) runGrowPartition(step ExecutionStep) error {
+	if step.DestinationDisk == "" || step.PartitionIndex <= 0 {
+		return fmt.Errorf("grow-partition on %s: missing destination or partition index", step.DestinationDisk)
+	}
+	disk := ensureDevPrefix(step.DestinationDisk)
+	cmdStr := fmt.Sprintf("parted -s %s resizepart %d 100%%", disk, step.PartitionIndex)
 	return runShellCommand(cmdStr)
 }
 

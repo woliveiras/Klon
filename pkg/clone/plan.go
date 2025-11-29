@@ -12,6 +12,7 @@ type PlanOptions struct {
 	Destination        string
 	Initialize         bool
 	ForceTwoPartitions bool
+	ExpandLastPartition bool
 	Quiet              bool
 	Unattended         bool
 	UnattendedInit     bool

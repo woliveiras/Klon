@@ -42,6 +42,29 @@ func BuildExecutionSteps(plan PlanResult, opts PlanOptions) []ExecutionStep {
 			Mountpoint:      "",
 			Description:     desc,
 		})
+
+		// Optionally grow the last data partition (usually root) to use all
+		// remaining space on the destination disk after cloning the partition
+		// table.
+		if opts.ExpandLastPartition {
+			lastIdx := 0
+			for _, part := range plan.Partitions {
+				if part.Index > lastIdx && part.Action != "" && part.Action != "sync" {
+					lastIdx = part.Index
+				}
+			}
+			if lastIdx > 0 {
+				growDesc := fmt.Sprintf("grow destination partition %d on %s to fill remaining space", lastIdx, opts.Destination)
+				steps = append(steps, ExecutionStep{
+					Operation:       "grow-partition",
+					SourceDevice:    "",
+					DestinationDisk: opts.Destination,
+					PartitionIndex:  lastIdx,
+					Mountpoint:      "",
+					Description:     growDesc,
+				})
+			}
+		}
 	}
 
 	for _, part := range plan.Partitions {

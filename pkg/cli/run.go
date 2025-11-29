@@ -17,6 +17,7 @@ type Options struct {
 	DestRoot             string
 	Initialize           bool // -f
 	ForceTwoPartitions   bool // -f2
+	ExpandLastPartition  bool // --expand-root
 	BootPartitionSizeArg string
 	Quiet                bool // -q
 	Unattended           bool // -u
@@ -124,17 +125,18 @@ func run(args []string, ui UI) error {
 	}
 
 	planOpts := clone.PlanOptions{
-		Destination:        opts.Destination,
-		Initialize:         opts.Initialize,
-		ForceTwoPartitions: opts.ForceTwoPartitions,
-		Quiet:              opts.Quiet,
-		Unattended:         opts.Unattended,
-		UnattendedInit:     opts.UnattendedInit,
-		Verbose:            opts.Verbose,
-		PartitionStrategy:  opts.PartitionStrategy,
-		ExcludePatterns:    opts.ExcludePatterns,
-		ExcludeFromFiles:   opts.ExcludeFromFiles,
-		Hostname:           opts.Hostname,
+		Destination:         opts.Destination,
+		Initialize:          opts.Initialize,
+		ForceTwoPartitions:  opts.ForceTwoPartitions,
+		ExpandLastPartition: opts.ExpandLastPartition,
+		Quiet:               opts.Quiet,
+		Unattended:          opts.Unattended,
+		UnattendedInit:      opts.UnattendedInit,
+		Verbose:             opts.Verbose,
+		PartitionStrategy:   opts.PartitionStrategy,
+		ExcludePatterns:     opts.ExcludePatterns,
+		ExcludeFromFiles:    opts.ExcludeFromFiles,
+		Hostname:            opts.Hostname,
 	}
 
 	plan, err := clone.Plan(planOpts)
@@ -225,6 +227,7 @@ func parseFlags(args []string) (Options, []string, error) {
 
 	fs.BoolVar(&opts.Initialize, "f", false, "force initialize destination partition table from source disk")
 	fs.BoolVar(&opts.ForceTwoPartitions, "f2", false, "force initialize only the first two partitions")
+	fs.BoolVar(&opts.ExpandLastPartition, "expand-root", false, "grow the last data partition on destination to use all remaining space")
 	fs.BoolVar(&opts.Quiet, "q", false, "quiet mode (implies unattended)")
 	fs.BoolVar(&opts.Unattended, "u", false, "unattended clone if not initializing")
 	fs.BoolVar(&opts.UnattendedInit, "U", false, "unattended even if initializing")
@@ -318,10 +321,20 @@ func interactiveWizard(ui UI) (Options, error) {
 		}
 	}
 
+	expandLast := false
+	if init {
+		ok, err := ui.Confirm("Do you want the last data partition (usually the root filesystem) on the destination disk to grow and use all remaining free space?")
+		if err != nil {
+			return Options{}, err
+		}
+		expandLast = ok
+	}
+
 	return Options{
-		Destination:        dest,
-		Initialize:         init,
-		ForceTwoPartitions: forceTwo,
-		PartitionStrategy:  strategy,
+		Destination:         dest,
+		Initialize:          init,
+		ForceTwoPartitions:  forceTwo,
+		PartitionStrategy:   strategy,
+		ExpandLastPartition: expandLast,
 	}, nil
 }

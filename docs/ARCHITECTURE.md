@@ -175,6 +175,10 @@ Execution:
     - For `"prepare-disk"` operations:
       - Uses `sfdisk -d <source> | sfdisk <dest>` to clone the partition
         table when the strategy is `clone-table`.
+    - For `"grow-partition"` operations (when `ExpandLastPartition` is true):
+      - Uses `parted -s <dest> resizepart <n> 100%` to grow the last data
+        partition (geralmente a root) para usar todo o espaço restante do disco
+        de destino antes de criar o filesystem.
     - For `"initialize-partition"` operations:
       - Detects the filesystem on the source partition using `lsblk`.
       - Runs `mkfs.ext4`, `mkfs.vfat` or `mkswap` on the corresponding
