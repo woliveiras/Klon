@@ -115,6 +115,9 @@ func run(args []string, ui UI) error {
 		if err != nil {
 			return err
 		}
+		// Preserve non-interactive options like DestRoot and logging settings.
+		wizardOpts.DestRoot = opts.DestRoot
+		wizardOpts.LogFile = opts.LogFile
 		opts = wizardOpts
 	} else {
 		opts.Destination = rest[0]
