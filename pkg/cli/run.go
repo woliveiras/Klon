@@ -105,11 +105,15 @@ func run(args []string, ui UI) error {
 
 	rest := fs.Args()
 	if len(rest) < 1 {
-		// This is where the interactive wizard will live.
-		return fmt.Errorf("interactive mode is not implemented yet; run with a destination disk, e.g. 'gopi sda'")
+		// No destination given: start interactive wizard.
+		wizardOpts, err := interactiveWizard(ui)
+		if err != nil {
+			return err
+		}
+		opts = wizardOpts
+	} else {
+		opts.Destination = rest[0]
 	}
-
-	opts.Destination = rest[0]
 
 	plan, err := clone.Plan(opts.Destination)
 	if err != nil {
@@ -122,4 +126,34 @@ func run(args []string, ui UI) error {
 	}
 
 	return fmt.Errorf("non-dry-run mode is not implemented yet")
+}
+
+// interactiveWizard asks a minimal set of questions to obtain safe defaults
+// for a clone run. For now, it only asks for a destination disk and always
+// runs in dry-run mode.
+func interactiveWizard(ui UI) (Options, error) {
+	ui.Println("Welcome to gopi interactive mode.")
+	ui.Println("For now, gopi will only compute and display a clone plan (dry-run).")
+
+	dest, err := ui.Ask("Destination disk (e.g. sda, nvme0n1): ")
+	if err != nil {
+		return Options{}, err
+	}
+	dest = strings.TrimSpace(dest)
+	if dest == "" {
+		return Options{}, fmt.Errorf("no destination selected")
+	}
+
+	ok, err := ui.Confirm(fmt.Sprintf("Use destination '%s'?", dest))
+	if err != nil {
+		return Options{}, err
+	}
+	if !ok {
+		return Options{}, fmt.Errorf("interactive clone cancelled by user")
+	}
+
+	return Options{
+		Destination: dest,
+		DryRun:      true,
+	}, nil
 }
