@@ -78,7 +78,10 @@ func (r *CommandRunner) runGrowPartition(step ExecutionStep) error {
 	}
 
 	// Then grow the filesystem inside the partition. We currently support
-	// ext-based roots (mkfs.ext4), so resize2fs is appropriate here.
+	// ext-based roots (mkfs.ext4), so resize2fs is appropriate here. Run a
+	// non-interactive e2fsck first as resize2fs recommends.
+	_ = runShellCommand(fmt.Sprintf("e2fsck -f -p %s || true", part))
+
 	if err := runShellCommand(fmt.Sprintf("resize2fs %s", part)); err != nil {
 		return fmt.Errorf("grow-partition on %s: resize2fs failed for %s: %w", step.DestinationDisk, part, err)
 	}
