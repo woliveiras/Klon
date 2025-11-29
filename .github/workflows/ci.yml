@@ -23,14 +23,13 @@ jobs:
         run: go test ./...
 
       - name: Build binary
-        run: go build -o gopi .
+        run: go build -o klon .
 
       - name: Smoke test binary
-        run: ./gopi sda
+        run: ./klon sda
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v5
         with:
-          name: gopi-linux-amd64
-          path: gopi
-
+          name: klon-linux-amd64
+          path: klon

@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/woliveiras/gopi/pkg/clone"
+	"github.com/woliveiras/klon/pkg/clone"
 )
 
 // Options holds high-level configuration for a clone run.
@@ -131,8 +131,8 @@ func run(args []string, ui UI) error {
 	}
 
 	if opts.Execute {
-		if os.Getenv("GOPI_ALLOW_WRITE") != "1" {
-			return fmt.Errorf("execute mode is protected; set GOPI_ALLOW_WRITE=1 to enable")
+		if os.Getenv("KLON_ALLOW_WRITE") != "1" {
+			return fmt.Errorf("execute mode is protected; set KLON_ALLOW_WRITE=1 to enable")
 		}
 		if err := clone.ValidateCloneSafety(plan, planOpts); err != nil {
 			return err
@@ -198,7 +198,7 @@ func run(args []string, ui UI) error {
 // parseFlags parses command-line flags into Options and returns the remaining
 // non-flag arguments (typically the destination disk).
 func parseFlags(args []string) (Options, []string, error) {
-	fs := flag.NewFlagSet("gopi", flag.ContinueOnError)
+	fs := flag.NewFlagSet("klon", flag.ContinueOnError)
 	opts := Options{
 		DryRun:   true,
 		DestRoot: "/mnt/clone",
@@ -207,7 +207,7 @@ func parseFlags(args []string) (Options, []string, error) {
 	var excludeFromList string
 
 	fs.BoolVar(&opts.DryRun, "dry-run", true, "show what would be cloned without making changes")
-	fs.BoolVar(&opts.Execute, "execute", false, "execute planned steps (requires GOPI_ALLOW_WRITE=1)")
+	fs.BoolVar(&opts.Execute, "execute", false, "execute planned steps (requires KLON_ALLOW_WRITE=1)")
 	fs.StringVar(&opts.DestRoot, "dest-root", "/mnt/clone", "destination root mountpoint for clone (for execute/logging)")
 
 	fs.BoolVar(&opts.Initialize, "f", false, "force initialize destination partition table from source disk")
@@ -254,8 +254,8 @@ func parseFlags(args []string) (Options, []string, error) {
 // user wants to initialize the destination (like -f / -f2), and always
 // runs in dry-run mode.
 func interactiveWizard(ui UI) (Options, error) {
-	ui.Println("Welcome to gopi interactive mode.")
-	ui.Println("For now, gopi will only compute and display a clone plan (dry-run).")
+	ui.Println("Welcome to Klon interactive mode.")
+	ui.Println("For now, Klon will only compute and display a clone plan (dry-run).")
 
 	dest, err := ui.Ask("Destination disk (e.g. sda, nvme0n1): ")
 	if err != nil {

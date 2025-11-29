@@ -1,10 +1,10 @@
-# Gopi
+# Klon
 
-> [GO]lang + Co[P]y for Raspberry [PI] Disk Cloning.
+> From Greek κλώνος (klónos): a “shoot” or “branch” — a copy grown from the original.
 
 A tool to clone Raspberry Pi disks, written in Go. Inspired by the fantastic [rpi-clone](https://github.com/billw2/rpi-clone).
 
-> ⚠️ Gopi is under active development. It has a real **execute** mode that can format and overwrite disks. By default it runs in dry-run mode, but when using `--execute` you must assume it will destroy all data on the destination disk.
+> ⚠️ Klon is under active development. It has a real **execute** mode that can format and overwrite disks. By default it runs in dry-run mode, but when using `--execute` you must assume it will destroy all data on the destination disk.
 
 ## Development
 
@@ -54,7 +54,7 @@ On a Raspberry Pi, the two main usage modes are:
   go run .
   ```
 
-  Gopi will:
+  Klon will:
   - detect the boot disk,
   - ask you which destination disk to use (e.g. `sda`, `nvme0n1`),
   - ask whether to initialize the destination (equivalent to `-f` / `-f2`),
@@ -84,7 +84,7 @@ On a Raspberry Pi, the two main usage modes are:
   - `-u` – unattended clone if not initializing (skip confirmations when only syncing).
   - `-U` – unattended even if initializing (skip confirmations for destructive steps).
   - `-v` – verbose: prints planned execution steps in addition to the plan (dry-run).
-  - `--execute` – run the planned steps through the execution pipeline and requires `GOPI_ALLOW_WRITE=1` to be set.
+  - `--execute` – run the planned steps through the execution pipeline and requires `KLON_ALLOW_WRITE=1` to be set.
   - `--dest-root` – directory where destination partitions are (or will be)
     mounted when executing/logging sync steps (default: `/mnt/clone`).
   - `--exclude` – comma-separated patterns to exclude from `rsync` (e.g. `--exclude "/var/log/*,/home/*/.cache"`).
@@ -93,7 +93,7 @@ On a Raspberry Pi, the two main usage modes are:
   Example of protected execute mode:
 
   ```bash
-  GOPI_ALLOW_WRITE=1 go run . --execute --dest-root /mnt/clone sda
+  KLON_ALLOW_WRITE=1 go run . --execute --dest-root /mnt/clone sda
   ```
 
   This will:

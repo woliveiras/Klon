@@ -1,13 +1,13 @@
-# Gopi Architecture
+# Klon Architecture
 
-This document describes the high-level architecture of the Gopi project.
+This document describes the high-level architecture of the Klon project.
 
 The goal is to provide a Go-based disk cloning tool for Raspberry Pi, with a
 focus on safety, testability (TDD), and clear separation of concerns.
 
 ## Overview
 
-Gopi is structured as a small CLI binary plus internal packages:
+Klon is structured as a small CLI binary plus internal packages:
 
 - `main.go` – the entrypoint, responsible only for wiring CLI to the core logic.
 - `pkg/cli` – parses command-line arguments and coordinates high-level actions.
@@ -21,8 +21,8 @@ and external tools), but the main separation should stay: CLI vs. domain logic.
 There are two primary usage styles:
 
 1. **Direct (script-friendly) mode**:
-   - The user runs `gopi <destination> [flags]`, for example:
-     - `sudo gopi nvme0n1 -f`
+   - The user runs `klon <destination> [flags]`, for example:
+     - `sudo klon nvme0n1 -f`
    - `main.go` forwards `os.Args` to `cli.Run`.
    - `pkg/cli.Run`:
      - Parses flags (e.g. `-dry-run`, `-f`, `-q`, `--execute`, etc.).
@@ -37,7 +37,7 @@ There are two primary usage styles:
      execute that plan via a `Runner` implementation.
 
 2. **Interactive (user-friendly) mode**, used when no destination/flags are given:
-   - The user runs simply `gopi`.
+   - The user runs simply `klon`.
    - `pkg/cli.Run` detects that no destination was provided and starts an
      interactive "wizard" instead of failing with an error.
    - The wizard:
@@ -81,7 +81,7 @@ Responsibilities:
 - Provide a user-facing interface that is convenient for both interactive and scripted use.
 - Decide which high-level operations to trigger in `pkg/clone`.
 - Handle user-visible errors (e.g. missing destination, invalid flags).
-- Provide an interactive "wizard" flow when the user runs `gopi` without
+- Provide an interactive "wizard" flow when the user runs `klon` without
   destination or flags, asking questions to build a safe configuration
   before cloning.
 
@@ -123,7 +123,7 @@ Non-responsibilities:
 
 #### System abstraction
 
-The `System` interface describes how Gopi discovers information about the
+The `System` interface describes how Klon discovers information about the
 running system:
 
 - `BootDisk() (string, error)` – returns the device that backs `/` (e.g. `/dev/mmcblk0p2`).
@@ -165,7 +165,7 @@ Execution:
 - `Execute(plan, opts, runner)` – iterates over the steps and delegates to
   the `Runner`.
   - The CLI wires a **CommandRunner** when `--execute` is used (and
-    `GOPI_ALLOW_WRITE=1` is set) that:
+    `KLON_ALLOW_WRITE=1` is set) that:
     - For `"prepare-disk"` operations:
       - Uses `sfdisk -d <source> | sfdisk <dest>` to clone the partition
         table when the strategy is `clone-table`.

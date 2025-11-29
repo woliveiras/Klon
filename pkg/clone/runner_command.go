@@ -38,7 +38,7 @@ func (r *CommandRunner) Run(step ExecutionStep) error {
 	case "sync-filesystem":
 		return r.runSyncFilesystem(step)
 	default:
-		log.Printf("gopi: unknown operation %q for step: %s", step.Operation, step.Description)
+		log.Printf("klon: unknown operation %q for step: %s", step.Operation, step.Description)
 		return nil
 	}
 }
@@ -56,7 +56,7 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 		return fmt.Errorf("sync-filesystem: dest root is empty")
 	}
 	if step.Mountpoint == "" {
-		log.Printf("gopi: skipping sync-filesystem for %s: empty mountpoint", step.SourceDevice)
+		log.Printf("klon: skipping sync-filesystem for %s: empty mountpoint", step.SourceDevice)
 		return nil
 	}
 
@@ -78,7 +78,7 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 	defer func() {
 		umountCmd := fmt.Sprintf("umount %s", destPath)
 		if err := runShellCommand(umountCmd); err != nil {
-			log.Printf("gopi: WARNING: failed to unmount %s: %v", destPath, err)
+			log.Printf("klon: WARNING: failed to unmount %s: %v", destPath, err)
 		}
 	}()
 
@@ -120,11 +120,11 @@ func (r *CommandRunner) runInitializePartition(step ExecutionStep) error {
 }
 
 func runShellCommand(cmdStr string) error {
-	log.Printf("gopi: EXEC: %s", cmdStr)
+	log.Printf("klon: EXEC: %s", cmdStr)
 	cmd := exec.Command("sh", "-c", cmdStr)
 	out, err := cmd.CombinedOutput()
 	if len(out) > 0 {
-		log.Printf("gopi: OUTPUT: %s", strings.TrimSpace(string(out)))
+		log.Printf("klon: OUTPUT: %s", strings.TrimSpace(string(out)))
 	}
 	if err != nil {
 		return fmt.Errorf("command failed: %w", err)

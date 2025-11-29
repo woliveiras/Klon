@@ -48,7 +48,7 @@ func TestRun_NoDestinationUsesInteractiveWizard(t *testing.T) {
 		confirmResponses: []bool{true, false, false},
 	}
 
-	err := run([]string{"gopi"}, ui)
+	err := run([]string{"klon"}, ui)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestRun_NoDestinationUsesInteractiveWizard(t *testing.T) {
 
 func TestRun_WithDestinationRunsDryPlan(t *testing.T) {
 	ui := &fakeUI{}
-	err := run([]string{"gopi", "sda"}, ui)
+	err := run([]string{"klon", "sda"}, ui)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestRun_WithDestinationRunsDryPlan(t *testing.T) {
 
 func TestRun_VerboseShowsExecutionSteps(t *testing.T) {
 	ui := &fakeUI{}
-	err := run([]string{"gopi", "-v", "sda"}, ui)
+	err := run([]string{"klon", "-v", "sda"}, ui)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestInteractiveWizard_NewLayoutStrategy(t *testing.T) {
 }
 
 func TestParseFlags_ParsesCoreOptions(t *testing.T) {
-	opts, rest, err := parseFlags([]string{"gopi", "-f", "-f2", "-q", "-u", "-U", "-v", "--execute", "--dest-root", "/custom/clone", "sda"})
+	opts, rest, err := parseFlags([]string{"klon", "-f", "-f2", "-q", "-u", "-U", "-v", "--execute", "--dest-root", "/custom/clone", "sda"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -200,21 +200,21 @@ func TestParseFlags_ParsesCoreOptions(t *testing.T) {
 
 func TestRun_ExecuteProtectedByEnv(t *testing.T) {
 	ui := &fakeUI{}
-	err := run([]string{"gopi", "--execute", "sda"}, ui)
+	err := run([]string{"klon", "--execute", "sda"}, ui)
 	if err == nil {
-		t.Fatalf("expected error when GOPI_ALLOW_WRITE is not set")
+		t.Fatalf("expected error when KLON_ALLOW_WRITE is not set")
 	}
-	if !strings.Contains(err.Error(), "GOPI_ALLOW_WRITE") {
+	if !strings.Contains(err.Error(), "KLON_ALLOW_WRITE") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
 func TestRun_ExecuteWithEnvLogsSteps(t *testing.T) {
-	t.Setenv("GOPI_ALLOW_WRITE", "1")
+	t.Setenv("KLON_ALLOW_WRITE", "1")
 	ui := &fakeUI{}
 
 	// We only verify that run() reaches the safety validation path without
 	// panicking; we do not assert on the specific error because device names
 	// vary across environments.
-	_ = run([]string{"gopi", "--execute", "sda"}, ui)
+	_ = run([]string{"klon", "--execute", "sda"}, ui)
 }

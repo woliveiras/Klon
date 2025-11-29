@@ -1,4 +1,4 @@
-module github.com/woliveiras/gopi
+module github.com/woliveiras/klon
 
 go 1.25
 
