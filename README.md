@@ -1,5 +1,7 @@
 # Gopi
 
+> [GO]lang + Co[P]y for Raspberry [PI] Disk Cloning.
+
 A tool to clone Raspberry Pi disks, written in Go. Inspired by the fantastic [rpi-clone](https://github.com/billw2/rpi-clone).
 
 ## Development
