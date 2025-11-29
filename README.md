@@ -4,7 +4,7 @@
 
 A tool to clone Raspberry Pi disks, written in Go. Inspired by the fantastic [rpi-clone](https://github.com/billw2/rpi-clone).
 
-> ⚠️ Gopi is under active development and currently runs in **dry-run mode only**: it plans and prints what would be done, but does not yet write to disks.
+> ⚠️ Gopi is under active development. It has a real **execute** mode that can format and overwrite disks. By default it runs in dry-run mode, but when using `--execute` you must assume it will destroy all data on the destination disk.
 
 ## Development
 
@@ -57,10 +57,12 @@ On a Raspberry Pi, the two main usage modes are:
   Gopi will:
   - detect the boot disk,
   - ask you which destination disk to use (e.g. `sda`, `nvme0n1`),
-  - ask whether to initialize the destination like `rpi-clone -f` / `-f2`,
-  - show a detailed clone plan (no writes).
+  - ask whether to initialize the destination (equivalent to `-f` / `-f2`),
+  - ask how to prepare the partition table (clone existing layout or new layout),
+  - show a detailed clone plan and the execution steps (dry-run),
+  - optionally, if you choose `--execute`, run the plan after safety checks.
 
-- **Direct mode (script-friendly, like rpi-clone)**  
+- **Direct mode (script-friendly)**  
   Pass the destination (and optional flags) directly:
 
   ```bash
@@ -76,15 +78,17 @@ On a Raspberry Pi, the two main usage modes are:
   Supported flags so far:
 
   - `-dry-run` (default: true) – only plan and print actions.
-  - `-f` – mark the plan as an **initialize + sync** clone (like `rpi-clone -f`).
+  - `-f` – mark the plan as an **initialize + sync** clone (recreate partition table and filesystems on the destination).
   - `-f2` – when combined with `-f`, initialize only the first two partitions.
-  - `-q` – quiet mode (implies unattended; relevant in future non-dry-run mode).
-  - `-u`, `-U` – unattended modes (reserved for future non-dry-run behaviour).
-  - `-v` – verbose: prints planned execution steps in addition to the plan.
-  - `--execute` – run the planned steps through the execution pipeline
-    (currently **logging-only**) and requires `GOPI_ALLOW_WRITE=1` to be set.
+  - `-q` – quiet mode (implies unattended; minimal output; no confirmation in `--execute`).
+  - `-u` – unattended clone if not initializing (skip confirmations when only syncing).
+  - `-U` – unattended even if initializing (skip confirmations for destructive steps).
+  - `-v` – verbose: prints planned execution steps in addition to the plan (dry-run).
+  - `--execute` – run the planned steps through the execution pipeline and requires `GOPI_ALLOW_WRITE=1` to be set.
   - `--dest-root` – directory where destination partitions are (or will be)
     mounted when executing/logging sync steps (default: `/mnt/clone`).
+  - `--exclude` – comma-separated patterns to exclude from `rsync` (e.g. `--exclude "/var/log/*,/home/*/.cache"`).
+  - `--exclude-from` – comma-separated list of files with `rsync` exclude patterns.
 
   Example of protected execute mode:
 
@@ -92,8 +96,15 @@ On a Raspberry Pi, the two main usage modes are:
   GOPI_ALLOW_WRITE=1 go run . --execute --dest-root /mnt/clone sda
   ```
 
-  This will run through the `Execute` pipeline and log each step with an
-  `EXECUTE:` prefix, but still does not perform real disk writes.
+  This will:
+  - detect and validate the boot and destination disks,
+  - clone the partition table from the boot disk to `/dev/sda` (when `-f` is used),
+  - create fresh filesystems on the destination partitions,
+  - mount each destination partition under `/mnt/clone/...`,
+  - `rsync` files from the source to the destination (with system directories excluded for `/`),
+  - unmount the partitions again.
+
+  Use this only with a destination disk you are prepared to completely overwrite.
 
 ### Running unit tests
 

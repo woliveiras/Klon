@@ -18,20 +18,23 @@ and external tools), but the main separation should stay: CLI vs. domain logic.
 
 ## Data Flow
 
-There will be two primary usage styles:
+There are two primary usage styles:
 
 1. **Direct (script-friendly) mode**:
    - The user runs `gopi <destination> [flags]`, for example:
      - `sudo gopi nvme0n1 -f`
    - `main.go` forwards `os.Args` to `cli.Run`.
    - `pkg/cli.Run`:
-     - Parses flags (e.g. `-dry-run`, `-f`, `-q`, etc. — to be implemented).
+     - Parses flags (e.g. `-dry-run`, `-f`, `-q`, `--execute`, etc.).
      - Validates the destination device argument.
-     - Calls `clone.Plan(destination, opts)` to build a clone plan.
-     - In dry-run mode, prints the plan and exits.
-     - In non-dry-run mode (future work), will call `clone.Execute(plan, opts)`.
+     - Calls `clone.Plan(opts)` to build a clone plan.
+     - In dry-run mode, prints the plan (and optionally the execution steps).
+     - In `--execute` mode, performs safety checks, shows a summary, asks for
+       confirmation (depending on quiet/unattended flags), then calls
+       `clone.Execute(plan, opts, runner)`.
    - `pkg/clone` inspects the system and builds a safe, high-level plan of
-     partitions and actions before anything is modified on disk.
+     partitions and actions before anything is modified on disk, and can also
+     execute that plan via a `Runner` implementation.
 
 2. **Interactive (user-friendly) mode**, used when no destination/flags are given:
    - The user runs simply `gopi`.
@@ -161,16 +164,25 @@ Execution:
   - `Run(step ExecutionStep) error`.
 - `Execute(plan, opts, runner)` – iterates over the steps and delegates to
   the `Runner`.
-  - At this stage, the CLI wires a **command-logging runner** when
-    `--execute` is used (and `GOPI_ALLOW_WRITE=1` is set) that:
-    - For `"prepare-disk"` operations, prints the concrete command that
-      would prepare the partition table.
-    - For `"sync-filesystem"` operations, prints a `rsync` command line
-      showing how files would be synchronized to the destination root
-      (configurable via `--dest-root`).
-    - For other operations, falls back to the generic `Description`.
-  - Actual disk writes will be implemented later behind this interface in a
-    dedicated `Runner` implementation, keeping safety and testability.
+  - The CLI wires a **CommandRunner** when `--execute` is used (and
+    `GOPI_ALLOW_WRITE=1` is set) that:
+    - For `"prepare-disk"` operations:
+      - Uses `sfdisk -d <source> | sfdisk <dest>` to clone the partition
+        table when the strategy is `clone-table`.
+    - For `"initialize-partition"` operations:
+      - Detects the filesystem on the source partition using `lsblk`.
+      - Runs `mkfs.ext4`, `mkfs.vfat` or `mkswap` on the corresponding
+        destination partition.
+    - For `"sync-filesystem"` operations:
+      - Mounts the destination partition under `--dest-root`,
+        then runs `rsync -aAXH --delete` with appropriate excludes
+        (system paths and any user-provided `--exclude` /
+        `--exclude-from` patterns).
+      - Unmounts the destination partition afterwards, logging any failure.
+    - Logs all executed commands and their output using the standard `log`
+      package, so runs are auditable.
+  - Other `Runner` implementations (e.g. pure logging or dry-run runners)
+    can be plugged in for testing or alternative front-ends.
 
 ## Test-Driven Development (TDD)
 
@@ -203,7 +215,8 @@ Planned architecture evolutions:
   - Real file system types.
   - Sizes and usage information.
   - Flags like "initialize", "resize", and "sync".
-- Add an `Execute` step that:
-  - Enforces safety checks before modifying disks.
-  - Logs all operations for auditability.
-  - Mirrors common Raspberry Pi cloning workflows in small, well-tested increments.
+- Extend execution behaviour to cover more cloning workflows:
+  - Support additional partition strategies beyond `clone-table`.
+  - Handle more filesystem types and labelling options.
+  - Add post-clone adjustments, such as updating `fstab`, bootloader
+    configuration and host-specific settings in the cloned system.
