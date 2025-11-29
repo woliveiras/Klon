@@ -103,6 +103,13 @@ type commandLoggingRunner struct {
 
 func (r *commandLoggingRunner) Run(step clone.ExecutionStep) error {
 	switch step.Operation {
+	case "prepare-disk":
+		cmd, err := clone.BuildPartitionCommand(step, "")
+		if err != nil {
+			r.ui.Println("EXECUTE:", step.Description)
+			return nil
+		}
+		r.ui.Println("EXECUTE:", cmd)
 	case "sync-filesystem":
 		cmd, err := clone.BuildSyncCommand(step, r.destRoot)
 		if err != nil {

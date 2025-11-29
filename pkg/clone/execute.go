@@ -27,6 +27,23 @@ type Runner interface {
 func BuildExecutionSteps(plan PlanResult, opts PlanOptions) []ExecutionStep {
 	var steps []ExecutionStep
 
+	// If initialization is requested, add a disk preparation step first.
+	if opts.Initialize {
+		strategy := opts.PartitionStrategy
+		if strategy == "" {
+			strategy = "clone-table"
+		}
+		desc := fmt.Sprintf("prepare destination %s (strategy=%s)", opts.Destination, strategy)
+		steps = append(steps, ExecutionStep{
+			Operation:       "prepare-disk",
+			SourceDevice:    plan.SourceDisk,
+			DestinationDisk: opts.Destination,
+			PartitionIndex:  0,
+			Mountpoint:      "",
+			Description:     desc,
+		})
+	}
+
 	for _, part := range plan.Partitions {
 		src := part.Device
 		if src == "" {

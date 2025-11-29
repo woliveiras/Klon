@@ -11,7 +11,7 @@ func TestBuildExecutionSteps_BuildsOneStepPerPartition(t *testing.T) {
 			{Index: 2, Device: "/dev/mmcblk0p2", Mountpoint: "/", Action: "initialize+sync"},
 		},
 	}
-	opts := PlanOptions{Destination: "sda", Initialize: true}
+	opts := PlanOptions{Destination: "sda"}
 
 	steps := BuildExecutionSteps(plan, opts)
 
@@ -26,6 +26,34 @@ func TestBuildExecutionSteps_BuildsOneStepPerPartition(t *testing.T) {
 	}
 	if steps[0].SourceDevice == "" || steps[0].DestinationDisk == "" {
 		t.Fatalf("expected source and destination to be set, got %#v", steps[0])
+	}
+}
+
+func TestBuildExecutionSteps_AddsPrepareDiskWhenInitializing(t *testing.T) {
+	plan := PlanResult{
+		SourceDisk:      "/dev/mmcblk0",
+		DestinationDisk: "sda",
+		Partitions: []PartitionPlan{
+			{Index: 1, Device: "/dev/mmcblk0p1", Mountpoint: "/boot", Action: "initialize+sync[clone-table]"},
+			{Index: 2, Device: "/dev/mmcblk0p2", Mountpoint: "/", Action: "initialize+sync[clone-table]"},
+		},
+	}
+	opts := PlanOptions{
+		Destination:       "sda",
+		Initialize:        true,
+		PartitionStrategy: "clone-table",
+	}
+
+	steps := BuildExecutionSteps(plan, opts)
+
+	if len(steps) != 3 {
+		t.Fatalf("expected 3 steps (1 prepare + 2 partitions), got %d", len(steps))
+	}
+	if steps[0].Operation != "prepare-disk" {
+		t.Fatalf("expected first step to be prepare-disk, got %+v", steps[0])
+	}
+	if steps[0].SourceDevice != "/dev/mmcblk0" || steps[0].DestinationDisk != "sda" {
+		t.Fatalf("unexpected prepare-disk step source/destination: %+v", steps[0])
 	}
 }
 
