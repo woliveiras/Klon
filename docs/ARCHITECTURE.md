@@ -2,7 +2,7 @@
 
 This document describes the high-level architecture of the Gopi project.
 
-The goal is to provide a Go-based clone of the `rpi-clone` Bash tool, with a
+The goal is to provide a Go-based disk cloning tool for Raspberry Pi, with a
 focus on safety, testability (TDD), and clear separation of concerns.
 
 ## Overview
@@ -20,7 +20,7 @@ and external tools), but the main separation should stay: CLI vs. domain logic.
 
 There will be two primary usage styles:
 
-1. **Direct (script-friendly) mode**, similar to `rpi-clone`:
+1. **Direct (script-friendly) mode**:
    - The user runs `gopi <destination> [flags]`, for example:
      - `sudo gopi nvme0n1 -f`
    - `main.go` forwards `os.Args` to `cli.Run`.
@@ -75,7 +75,7 @@ Non-responsibilities:
 Responsibilities:
 
 - Parse and validate command-line flags and arguments.
-- Provide a user-facing interface that is conceptually similar to `rpi-clone`.
+- Provide a user-facing interface that is convenient for both interactive and scripted use.
 - Decide which high-level operations to trigger in `pkg/clone`.
 - Handle user-visible errors (e.g. missing destination, invalid flags).
 - Provide an interactive "wizard" flow when the user runs `gopi` without
@@ -142,8 +142,7 @@ Planning:
     - `SourceDisk`, `DestinationDisk`.
     - `Partitions` with device, mountpoint, and an `Action` such as:
       - `"sync"` – sync an existing file system.
-      - `"initialize+sync"` – re-initialize partition(s) then sync
-        (inspired by `rpi-clone -f` / `-f2`).
+      - `"initialize+sync"` – re-initialize partition(s) then sync.
 
 Execution:
 
@@ -195,4 +194,4 @@ Planned architecture evolutions:
 - Add an `Execute` step that:
   - Enforces safety checks before modifying disks.
   - Logs all operations for auditability.
-  - Mirrors `rpi-clone` behavior in small, well-tested increments.
+  - Mirrors common Raspberry Pi cloning workflows in small, well-tested increments.

@@ -12,6 +12,10 @@ type PlanOptions struct {
 	Unattended         bool
 	UnattendedInit     bool
 	Verbose            bool
+	// PartitionStrategy describes how the destination partition table should
+	// be prepared when Initialize is true. For now it is descriptive only.
+	// Examples: "clone-table", "new-layout".
+	PartitionStrategy string
 }
 
 // System abstracts how we discover information about disks and partitions
@@ -89,11 +93,18 @@ func PlanWithSystem(sys System, opts PlanOptions) (PlanResult, error) {
 	}
 
 	// Apply high-level options to decide actions. This is still a simplified
-	// model of what rpi-clone does, but it already reflects the intent of
-	// initialize vs. plain sync.
+	// model, but it already reflects the intent of initialize vs. plain sync.
 	if opts.Initialize {
+		mode := opts.PartitionStrategy
+		if mode == "" {
+			mode = "clone-table"
+		}
+		action := "initialize+sync"
+		if mode != "" {
+			action = fmt.Sprintf("%s[%s]", action, mode)
+		}
 		for i := range planParts {
-			planParts[i].Action = "initialize+sync"
+			planParts[i].Action = action
 		}
 		if opts.ForceTwoPartitions {
 			for i := range planParts {

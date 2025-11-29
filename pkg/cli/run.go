@@ -12,7 +12,6 @@ import (
 )
 
 // Options holds high-level configuration for a clone run.
-// This will be extended as we add more rpi-clone-compatible flags.
 type Options struct {
 	Destination          string
 	DryRun               bool
@@ -24,6 +23,7 @@ type Options struct {
 	Unattended           bool // -u
 	UnattendedInit       bool // -U
 	Verbose              bool // -v
+	PartitionStrategy    string
 }
 
 // UI abstracts user interaction so we can support both interactive
@@ -77,11 +77,9 @@ func (u *stdUI) Confirm(prompt string) (bool, error) {
 
 // Run is the main entrypoint for the CLI.
 //
-// It intentionally implements only a very small subset of rpi-clone behaviour
-// to start. It validates arguments and, in dry-run mode, prints the planned
-// clone operations without touching any disks. When no destination is given
-// it will, in the future, start an interactive wizard (for now it returns
-// a clear error indicating that).
+// It validates arguments and, in dry-run mode, prints the planned clone
+// operations without touching any disks. When no destination is given
+// it will start an interactive wizard to help the user choose safe options.
 func Run(args []string) error {
 	return run(args, NewStdUI())
 }
@@ -126,6 +124,7 @@ func run(args []string, ui UI) error {
 		Unattended:         opts.Unattended,
 		UnattendedInit:     opts.UnattendedInit,
 		Verbose:            opts.Verbose,
+		PartitionStrategy:  opts.PartitionStrategy,
 	}
 
 	plan, err := clone.Plan(planOpts)
@@ -180,7 +179,7 @@ func parseFlags(args []string) (Options, []string, error) {
 		return Options{}, nil, err
 	}
 
-	// Apply implied semantics similar to rpi-clone.
+	// Apply implied semantics.
 	if opts.Quiet {
 		opts.Unattended = true
 	}
@@ -190,7 +189,7 @@ func parseFlags(args []string) (Options, []string, error) {
 
 // interactiveWizard asks a minimal set of questions to obtain safe defaults
 // for a clone run. For now, it asks for a destination disk and whether the
-// user wants to initialize the destination like rpi-clone -f / -f2, and always
+// user wants to initialize the destination (like -f / -f2), and always
 // runs in dry-run mode.
 func interactiveWizard(ui UI) (Options, error) {
 	ui.Println("Welcome to gopi interactive mode.")
@@ -226,10 +225,28 @@ func interactiveWizard(ui UI) (Options, error) {
 		}
 	}
 
+	strategy := ""
+	if init {
+		answer, err := ui.Ask("Partition strategy: [c]lone existing layout or [n]ew layout? (default: c): ")
+		if err != nil {
+			return Options{}, err
+		}
+		answer = strings.ToLower(strings.TrimSpace(answer))
+		switch answer {
+		case "", "c", "clone":
+			strategy = "clone-table"
+		case "n", "new":
+			strategy = "new-layout"
+		default:
+			strategy = "clone-table"
+		}
+	}
+
 	return Options{
 		Destination:        dest,
 		DryRun:             true,
 		Initialize:         init,
 		ForceTwoPartitions: forceTwo,
+		PartitionStrategy:  strategy,
 	}, nil
 }

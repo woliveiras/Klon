@@ -126,7 +126,7 @@ func TestInteractiveWizard_CancelledByUser(t *testing.T) {
 
 func TestInteractiveWizard_SetsInitializeFlags(t *testing.T) {
 	ui := &fakeUI{
-		askResponses:     []string{"sda"},
+		askResponses:     []string{"sda", "c"},
 		confirmResponses: []bool{true, true, true},
 	}
 
@@ -142,6 +142,24 @@ func TestInteractiveWizard_SetsInitializeFlags(t *testing.T) {
 	}
 	if !opts.ForceTwoPartitions {
 		t.Fatalf("expected ForceTwoPartitions to be true")
+	}
+	if opts.PartitionStrategy != "clone-table" {
+		t.Fatalf("expected PartitionStrategy 'clone-table', got %q", opts.PartitionStrategy)
+	}
+}
+
+func TestInteractiveWizard_NewLayoutStrategy(t *testing.T) {
+	ui := &fakeUI{
+		askResponses:     []string{"sda", "n"},
+		confirmResponses: []bool{true, true, true},
+	}
+
+	opts, err := interactiveWizard(ui)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if opts.PartitionStrategy != "new-layout" {
+		t.Fatalf("expected PartitionStrategy 'new-layout', got %q", opts.PartitionStrategy)
 	}
 }
 

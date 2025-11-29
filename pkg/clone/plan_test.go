@@ -143,8 +143,8 @@ func TestPlanWithSystem_InitializeMarksActions(t *testing.T) {
 	}
 
 	for _, part := range plan.Partitions {
-		if part.Action != "initialize+sync" {
-			t.Fatalf("expected action 'initialize+sync', got %q for %+v", part.Action, part)
+		if !strings.Contains(part.Action, "initialize+sync") {
+			t.Fatalf("expected action to contain 'initialize+sync', got %q for %+v", part.Action, part)
 		}
 	}
 }
@@ -173,9 +173,9 @@ func TestPlanWithSystem_ForceTwoPartitionsOnlyFirstTwoInitialized(t *testing.T) 
 		t.Fatalf("expected 3 partitions, got %d", len(plan.Partitions))
 	}
 
-	if plan.Partitions[0].Action != "initialize+sync" ||
-		plan.Partitions[1].Action != "initialize+sync" {
-		t.Fatalf("expected first two partitions to be 'initialize+sync', got %+v, %+v",
+	if !strings.Contains(plan.Partitions[0].Action, "initialize+sync") ||
+		!strings.Contains(plan.Partitions[1].Action, "initialize+sync") {
+		t.Fatalf("expected first two partitions to contain 'initialize+sync', got %+v, %+v",
 			plan.Partitions[0], plan.Partitions[1])
 	}
 	if plan.Partitions[2].Action != "sync" {
