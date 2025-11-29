@@ -146,7 +146,7 @@ func TestInteractiveWizard_SetsInitializeFlags(t *testing.T) {
 }
 
 func TestParseFlags_ParsesCoreOptions(t *testing.T) {
-	opts, rest, err := parseFlags([]string{"gopi", "-f", "-f2", "-q", "-u", "-U", "-v", "sda"})
+	opts, rest, err := parseFlags([]string{"gopi", "-f", "-f2", "-q", "-u", "-U", "-v", "--execute", "sda"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -171,5 +171,40 @@ func TestParseFlags_ParsesCoreOptions(t *testing.T) {
 	}
 	if !opts.Verbose {
 		t.Fatalf("expected Verbose to be true")
+	}
+	if !opts.Execute {
+		t.Fatalf("expected Execute to be true")
+	}
+}
+
+func TestRun_ExecuteProtectedByEnv(t *testing.T) {
+	ui := &fakeUI{}
+	err := run([]string{"gopi", "--execute", "sda"}, ui)
+	if err == nil {
+		t.Fatalf("expected error when GOPI_ALLOW_WRITE is not set")
+	}
+	if !strings.Contains(err.Error(), "GOPI_ALLOW_WRITE") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRun_ExecuteWithEnvLogsSteps(t *testing.T) {
+	t.Setenv("GOPI_ALLOW_WRITE", "1")
+	ui := &fakeUI{}
+
+	err := run([]string{"gopi", "--execute", "sda"}, ui)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	foundExecute := false
+	for _, line := range ui.lines {
+		if strings.Contains(line, "EXECUTE:") {
+			foundExecute = true
+			break
+		}
+	}
+	if !foundExecute {
+		t.Fatalf("expected EXECUTE lines in output, got: %#v", ui.lines)
 	}
 }

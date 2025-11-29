@@ -16,6 +16,7 @@ import (
 type Options struct {
 	Destination          string
 	DryRun               bool
+	Execute              bool
 	Initialize           bool // -f
 	ForceTwoPartitions   bool // -f2
 	BootPartitionSizeArg string
@@ -85,6 +86,15 @@ func Run(args []string) error {
 	return run(args, NewStdUI())
 }
 
+type loggingRunner struct {
+	ui UI
+}
+
+func (r *loggingRunner) Run(step clone.ExecutionStep) error {
+	r.ui.Println("EXECUTE:", step.Description)
+	return nil
+}
+
 // run is the internal implementation that allows injecting a custom UI
 // (useful for tests and, later, different front-ends).
 func run(args []string, ui UI) error {
@@ -123,6 +133,14 @@ func run(args []string, ui UI) error {
 		return err
 	}
 
+	if opts.Execute {
+		if os.Getenv("GOPI_ALLOW_WRITE") != "1" {
+			return fmt.Errorf("execute mode is protected; set GOPI_ALLOW_WRITE=1 to enable")
+		}
+		runner := &loggingRunner{ui: ui}
+		return clone.Execute(plan, planOpts, runner)
+	}
+
 	if opts.DryRun {
 		ui.Println(plan.String())
 
@@ -149,6 +167,7 @@ func parseFlags(args []string) (Options, []string, error) {
 	}
 
 	fs.BoolVar(&opts.DryRun, "dry-run", true, "show what would be cloned without making changes")
+	fs.BoolVar(&opts.Execute, "execute", false, "execute planned steps (requires GOPI_ALLOW_WRITE=1)")
 
 	fs.BoolVar(&opts.Initialize, "f", false, "force initialize destination partition table from source disk")
 	fs.BoolVar(&opts.ForceTwoPartitions, "f2", false, "force initialize only the first two partitions")
