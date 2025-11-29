@@ -3,9 +3,15 @@ package clone
 import "fmt"
 
 // ExecutionStep is a high-level description of a concrete action that would be
-// taken to perform a clone. For now, it is only descriptive (no real I/O).
+// taken to perform a clone. It is both structured (for automation) and has a
+// human-readable description.
 type ExecutionStep struct {
-	Description string
+	Operation       string // e.g. "sync-filesystem", "initialize-partition"
+	SourceDevice    string
+	DestinationDisk string
+	PartitionIndex  int
+	Mountpoint      string
+	Description     string
 }
 
 // Runner abstracts how execution steps are performed. The initial implementation
@@ -38,7 +44,19 @@ func BuildExecutionSteps(plan PlanResult, opts PlanOptions) []ExecutionStep {
 			desc = fmt.Sprintf("%s mounted on %s", desc, part.Mountpoint)
 		}
 
-		steps = append(steps, ExecutionStep{Description: desc})
+		op := "sync-filesystem"
+		if part.Action != "" && part.Action != "sync" {
+			op = "initialize-partition"
+		}
+
+		steps = append(steps, ExecutionStep{
+			Operation:       op,
+			SourceDevice:    src,
+			DestinationDisk: opts.Destination,
+			PartitionIndex:  part.Index,
+			Mountpoint:      part.Mountpoint,
+			Description:     desc,
+		})
 	}
 
 	return steps
@@ -56,4 +74,3 @@ func Execute(plan PlanResult, opts PlanOptions, runner Runner) error {
 	}
 	return nil
 }
-

@@ -21,6 +21,12 @@ func TestBuildExecutionSteps_BuildsOneStepPerPartition(t *testing.T) {
 	if steps[0].Description == "" || steps[1].Description == "" {
 		t.Fatalf("expected non-empty descriptions, got %#v", steps)
 	}
+	if steps[0].Operation == "" || steps[1].Operation == "" {
+		t.Fatalf("expected non-empty operations, got %#v", steps)
+	}
+	if steps[0].SourceDevice == "" || steps[0].DestinationDisk == "" {
+		t.Fatalf("expected source and destination to be set, got %#v", steps[0])
+	}
 }
 
 type fakeRunner struct {
@@ -53,4 +59,3 @@ func TestExecute_DelegatesToRunner(t *testing.T) {
 		t.Fatalf("expected runner to receive 2 steps, got %d", len(r.steps))
 	}
 }
-
