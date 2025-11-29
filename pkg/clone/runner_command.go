@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 // CommandRunner executes ExecutionStep values by invoking system commands.
@@ -96,7 +97,29 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 	if err != nil {
 		return fmt.Errorf("sync-filesystem on %s: cannot build rsync command: %w", step.DestinationDisk, err)
 	}
-	return runShellCommand(cmdStr)
+
+	log.Printf("klon: EXEC: %s", cmdStr)
+	cmd := exec.Command("sh", "-c", cmdStr)
+	out, err := cmd.CombinedOutput()
+	if len(out) > 0 {
+		log.Printf("klon: OUTPUT: %s", strings.TrimSpace(string(out)))
+	}
+	if err != nil {
+		// rsync exit code 23 is very common when cloning a live root
+		// filesystem because of ephemeral/virtual files under /sys, /proc,
+		// etc. For the root mountpoint we treat this as a warning, not a
+		// hard failure, so the clone can still succeed.
+		if step.Mountpoint == "/" {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.ExitStatus() == 23 {
+					log.Printf("klon: WARNING: rsync for root exited with code 23 (partial transfer, usually due to live /proc or /sys). Continuing.")
+					return nil
+				}
+			}
+		}
+		return fmt.Errorf("command failed: %w", err)
+	}
+	return nil
 }
 
 func (r *CommandRunner) runInitializePartition(step ExecutionStep) error {
