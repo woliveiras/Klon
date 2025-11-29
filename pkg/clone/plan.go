@@ -2,6 +2,12 @@ package clone
 
 import "fmt"
 
+// PlanOptions represents the inputs required to compute a clone plan.
+// It mirrors, at a high level, the user-facing options parsed by the CLI.
+type PlanOptions struct {
+	Destination string
+}
+
 // PlanResult is a high-level description of what will be cloned.
 // This is intentionally simple for the first TDD step.
 type PlanResult struct {
@@ -16,21 +22,21 @@ type PartitionPlan struct {
 	Action string
 }
 
-// Plan inspects the current system and the given destination device
-// name (e.g. "sda") and builds a high-level plan of what would be cloned.
+// Plan inspects the current system and the given options and builds a
+// high-level plan of what would be cloned.
 //
 // For the first iteration, we don't actually inspect the real system yet;
 // we just validate the destination name and return a stubbed plan. This keeps
 // the behaviour safe while we grow tests and functionality.
-func Plan(destination string) (PlanResult, error) {
-	if destination == "" {
+func Plan(opts PlanOptions) (PlanResult, error) {
+	if opts.Destination == "" {
 		return PlanResult{}, fmt.Errorf("destination disk cannot be empty")
 	}
 
 	// Placeholder behaviour: just return a minimal plan referencing the given destination.
 	return PlanResult{
 		SourceDisk:      "booted-disk",
-		DestinationDisk: destination,
+		DestinationDisk: opts.Destination,
 		Partitions: []PartitionPlan{
 			{Index: 1, Action: "sync"},
 			{Index: 2, Action: "sync"},
@@ -46,4 +52,3 @@ func (p PlanResult) String() string {
 	}
 	return out
 }
-

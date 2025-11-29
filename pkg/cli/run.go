@@ -115,7 +115,9 @@ func run(args []string, ui UI) error {
 		opts.Destination = rest[0]
 	}
 
-	plan, err := clone.Plan(opts.Destination)
+	plan, err := clone.Plan(clone.PlanOptions{
+		Destination: opts.Destination,
+	})
 	if err != nil {
 		return err
 	}

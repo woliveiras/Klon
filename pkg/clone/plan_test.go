@@ -3,14 +3,15 @@ package clone
 import "testing"
 
 func TestPlan_RejectsEmptyDestination(t *testing.T) {
-	_, err := Plan("")
+	_, err := Plan(PlanOptions{})
 	if err == nil {
 		t.Fatalf("expected error for empty destination")
 	}
 }
 
 func TestPlan_ReturnsBasicPlan(t *testing.T) {
-	plan, err := Plan("sda")
+	opts := PlanOptions{Destination: "sda"}
+	plan, err := Plan(opts)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
