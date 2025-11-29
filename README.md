@@ -165,6 +165,7 @@ On a Raspberry Pi, the two main usage modes are:
   - `-q` – quiet mode (implies unattended; minimal output; no confirmation before applying).
   - `-u` – unattended clone if not initializing (skip confirmations when only syncing).
   - `-U` – unattended even if initializing (skip confirmations for destructive steps).
+  - `--auto-approve` – do not ask for confirmation before applying (even if not quiet).
   - `-v` – verbose: prints planned execution steps in addition to the plan.
   - `--dest-root` – directory where destination partitions are (or will be)
     mounted when executing/logging sync steps (default: `/mnt/clone`).

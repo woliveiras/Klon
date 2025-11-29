@@ -20,6 +20,7 @@ type Options struct {
 	Quiet                bool // -q
 	Unattended           bool // -u
 	UnattendedInit       bool // -U
+	AutoApprove          bool // --auto-approve
 	Verbose              bool // -v
 	PartitionStrategy    string
 	ExcludePatterns      []string
@@ -152,6 +153,8 @@ func run(args []string, ui UI) error {
 	askConfirm := true
 	if opts.Quiet {
 		askConfirm = false
+	} else if opts.AutoApprove {
+		askConfirm = false
 	} else if opts.UnattendedInit && opts.Initialize {
 		askConfirm = false
 	} else if opts.Unattended && !opts.Initialize {
@@ -202,6 +205,7 @@ func parseFlags(args []string) (Options, []string, error) {
 	fs.BoolVar(&opts.Quiet, "q", false, "quiet mode (implies unattended)")
 	fs.BoolVar(&opts.Unattended, "u", false, "unattended clone if not initializing")
 	fs.BoolVar(&opts.UnattendedInit, "U", false, "unattended even if initializing")
+	fs.BoolVar(&opts.AutoApprove, "auto-approve", false, "do not ask for confirmation before applying the plan")
 	fs.BoolVar(&opts.Verbose, "v", false, "verbose mode")
 	fs.StringVar(&excludeList, "exclude", "", "comma-separated patterns to exclude from rsync")
 	fs.StringVar(&excludeFromList, "exclude-from", "", "comma-separated files with rsync exclude patterns")
