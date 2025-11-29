@@ -84,6 +84,31 @@ func TestRun_WithDestinationRunsDryPlan(t *testing.T) {
 	}
 }
 
+func TestRun_VerboseShowsExecutionSteps(t *testing.T) {
+	ui := &fakeUI{}
+	err := run([]string{"gopi", "-v", "sda"}, ui)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	foundStepsHeader := false
+	foundStepLine := false
+	for _, line := range ui.lines {
+		if strings.Contains(line, "Planned execution steps:") {
+			foundStepsHeader = true
+		}
+		if strings.Contains(line, "from") && strings.Contains(line, "to sda") {
+			foundStepLine = true
+		}
+	}
+	if !foundStepsHeader {
+		t.Fatalf("expected verbose output to include steps header, got: %#v", ui.lines)
+	}
+	if !foundStepLine {
+		t.Fatalf("expected at least one execution step line, got: %#v", ui.lines)
+	}
+}
+
 func TestInteractiveWizard_CancelledByUser(t *testing.T) {
 	ui := &fakeUI{
 		askResponses:     []string{"sda"},

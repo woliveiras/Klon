@@ -4,6 +4,8 @@
 
 A tool to clone Raspberry Pi disks, written in Go. Inspired by the fantastic [rpi-clone](https://github.com/billw2/rpi-clone).
 
+> ⚠️ Gopi is under active development and currently runs in **dry-run mode only**: it plans and prints what would be done, but does not yet write to disks.
+
 ## Development
 
 ### Requirements
@@ -35,13 +37,50 @@ For other operating systems, or if you prefer not to use Homebrew, you can follo
 
 ### Running in development mode
 
-Since the project is still in an early stage, the commands to run it may change. For now, to run the application, you can use:
+Since the project is still in an early stage, the commands to run it may change. For now, to run the application in **dry-run** mode, you can use:
 
 ```bash
 go run .
 ```
 
 This command will compile and run the project's main file.
+
+On a Raspberry Pi, the two main usage modes are:
+
+- **Interactive mode (recommended for humans)**  
+  Just run:
+
+  ```bash
+  go run .
+  ```
+
+  Gopi will:
+  - detect the boot disk,
+  - ask you which destination disk to use (e.g. `sda`, `nvme0n1`),
+  - ask whether to initialize the destination like `rpi-clone -f` / `-f2`,
+  - show a detailed clone plan (no writes).
+
+- **Direct mode (script-friendly, like rpi-clone)**  
+  Pass the destination (and optional flags) directly:
+
+  ```bash
+  go run . sda
+  ```
+
+  Or, with verbose output (includes planned execution steps):
+
+  ```bash
+  go run . -v sda
+  ```
+
+  Supported flags so far:
+
+  - `-dry-run` (default: true) – only plan and print actions.
+  - `-f` – mark the plan as an **initialize + sync** clone (like `rpi-clone -f`).
+  - `-f2` – when combined with `-f`, initialize only the first two partitions.
+  - `-q` – quiet mode (implies unattended; relevant in future non-dry-run mode).
+  - `-u`, `-U` – unattended modes (reserved for future non-dry-run behaviour).
+  - `-v` – verbose: prints planned execution steps in addition to the plan.
 
 ### Running unit tests
 

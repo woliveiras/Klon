@@ -108,7 +108,7 @@ func run(args []string, ui UI) error {
 		opts.Destination = rest[0]
 	}
 
-	plan, err := clone.Plan(clone.PlanOptions{
+	planOpts := clone.PlanOptions{
 		Destination:        opts.Destination,
 		Initialize:         opts.Initialize,
 		ForceTwoPartitions: opts.ForceTwoPartitions,
@@ -116,13 +116,24 @@ func run(args []string, ui UI) error {
 		Unattended:         opts.Unattended,
 		UnattendedInit:     opts.UnattendedInit,
 		Verbose:            opts.Verbose,
-	})
+	}
+
+	plan, err := clone.Plan(planOpts)
 	if err != nil {
 		return err
 	}
 
 	if opts.DryRun {
 		ui.Println(plan.String())
+
+		if opts.Verbose {
+			ui.Println("Planned execution steps:")
+			steps := clone.BuildExecutionSteps(plan, planOpts)
+			for _, step := range steps {
+				ui.Println("  -", step.Description)
+			}
+		}
+
 		return nil
 	}
 
