@@ -1,6 +1,18 @@
 package clone
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
+
+type fakeSystem struct {
+	bootDisk string
+	err      error
+}
+
+func (f fakeSystem) BootDisk() (string, error) {
+	return f.bootDisk, f.err
+}
 
 func TestPlan_RejectsEmptyDestination(t *testing.T) {
 	_, err := Plan(PlanOptions{})
@@ -25,3 +37,26 @@ func TestPlan_ReturnsBasicPlan(t *testing.T) {
 	}
 }
 
+func TestPlanWithSystem_UsesBootDiskFromSystem(t *testing.T) {
+	sys := fakeSystem{bootDisk: "mmcblk0"}
+	opts := PlanOptions{Destination: "sda"}
+
+	plan, err := PlanWithSystem(sys, opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if plan.SourceDisk != "mmcblk0" {
+		t.Fatalf("expected source disk 'mmcblk0', got %q", plan.SourceDisk)
+	}
+}
+
+func TestPlanWithSystem_ErrorFromSystem(t *testing.T) {
+	sys := fakeSystem{err: fmt.Errorf("boom")}
+	opts := PlanOptions{Destination: "sda"}
+
+	_, err := PlanWithSystem(sys, opts)
+	if err == nil {
+		t.Fatalf("expected error when system fails")
+	}
+}
