@@ -27,14 +27,18 @@ func TestBuildSyncCommand_RootMountpoint(t *testing.T) {
 		Operation:  "sync-filesystem",
 		Mountpoint: "/",
 	}
-
 	cmd, err := BuildSyncCommand(step, "/mnt/clone", nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expectedPrefix := "rsync -aAXH --delete --exclude /proc/* --exclude /sys/* --exclude /dev/*"
-	if !strings.HasPrefix(cmd, expectedPrefix) {
-		t.Fatalf("expected rsync command for root to start with %q, got: %q", expectedPrefix, cmd)
+	if !strings.HasPrefix(cmd, "rsync -aAXH --delete --one-file-system") {
+		t.Fatalf("expected rsync command for root to include --one-file-system, got: %q", cmd)
+	}
+	if !strings.Contains(cmd, "--exclude /proc/**") ||
+		!strings.Contains(cmd, "--exclude /sys/**") ||
+		!strings.Contains(cmd, "--exclude /dev/**") ||
+		!strings.Contains(cmd, "--exclude /run/**") {
+		t.Fatalf("expected rsync command for root to contain core pseudo-filesystem excludes, got: %q", cmd)
 	}
 }

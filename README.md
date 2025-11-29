@@ -4,7 +4,7 @@
 
 A tool to clone Raspberry Pi disks, written in Go. Inspired by the fantastic [rpi-clone](https://github.com/billw2/rpi-clone).
 
-> ⚠️ Klon is under active development. It has a real **apply** mode that can format and overwrite disks. By default it runs in plan mode, but when using `--apply` you must assume it will destroy all data on the destination disk.
+> ⚠️ Klon is under active development. It can **format and overwrite disks**. Every run first computes and shows a clone plan and then asks for confirmation before doing anything destructive. Only run it when you are sure about the destination disk.
 
 ## Installation
 
@@ -23,11 +23,11 @@ This will install a `klon` binary in your `PATH`.
 
 You can run Klon in two main modes: interactive (recommended for normal humans) and direct (advanced users).
 
-### List clone plan (plan-only)
+### See the clone plan
 
-The plan-only mode is the default. It only computes and prints the clone plan without modifying anything on disk.
+Klon always computes a plan first and shows it before making changes. You can stop after seeing the plan (plan-only) or confirm to actually clone.
 
-1) Interactive mode:
+1) Interactive mode (shows plan, then asks to confirm):
 
 ```bash
 sudo klon
@@ -40,9 +40,12 @@ Klon will:
 - ask whether to reset and prepare the destination disk (this will erase all data on it),
 - ask whether to use only the first two partitions (boot and root) or the whole disk,
 - ask how to prepare the partition table (clone existing layout or new layout),
-- show a detailed clone plan and the execution steps (plan-only).
+- show a detailed clone plan and the execution steps,
+- then ask if you want to actually run that plan.
 
-2) Direct mode (no questions, but still plan-only):
+If you answer “no” at the final confirmation, nothing is written to the destination disk.
+
+2) Direct mode (fewer questions, still shows plan and asks to confirm):
 
 ```bash
 sudo klon sda
@@ -59,7 +62,7 @@ sudo klon -v sda
 To actually format the destination disk and copy the data, you must:
 
 - run with `sudo`,
-- confirm the plan when Klon asks.
+- confirm the plan when Klon asks (or use `--auto-approve` if you are scripting and fully understand the risk).
 
 Typical example (clone the boot disk to `sda` using the current layout):
 
@@ -72,7 +75,7 @@ This command will:
 - clone the partition table from the boot disk to `/dev/sda` (because of `-f`),
 - create new file systems on the destination partitions,
 - mount each destination partition under `/mnt/clone/...`,
-- use `rsync` to copy files (with system directories excluded for `/`),
+- use `rsync` to copy files (for `/` it excludes pseudo-filesystems and runtime directories such as `/proc`, `/sys`, `/dev`, `/run`, `/tmp`, `/mnt`, `/media`),
 - adjust `fstab`, `cmdline.txt` and, if you use `--hostname`, the hostname/`/etc/hosts` in the cloned system,
 - unmount the destination partitions at the end.
 

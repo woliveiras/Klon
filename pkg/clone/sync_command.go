@@ -42,27 +42,43 @@ func BuildSyncCommand(step ExecutionStep, destRoot string, extraExcludes []strin
 	}
 
 	// When syncing the root filesystem, exclude pseudo filesystems and the
-	// destination root itself to avoid recursion.
+	// destination root itself to avoid recursion and noisy errors.
 	if step.Mountpoint == "/" {
+		// Avoid crossing filesystem boundaries for the root clone. /boot (or
+		// equivalent) is handled by a separate step.
+		args = append(args, "--one-file-system")
+
 		excludes := []string{
-			"/proc/*",
-			"/sys/*",
-			"/dev/*",
-			"/run/*",
-			"/tmp/*",
-			"/mnt/*",
+			"/proc/**",
+			"/sys/**",
+			"/dev/**",
+			"/run/**",
+			"/tmp/**",
+			"/mnt/**",
+			"/media/**",
 		}
 		if destRoot != "" {
-			excludes = append(excludes, destRoot+"/*")
+			// Explicitly exclude the destination root mountpoint, which lives
+			// under / when mounted (for example, /mnt/clone).
+			excludes = append(excludes, destRoot+"/**")
 		}
 		for _, e := range excludes {
 			args = append(args, "--exclude", e)
 		}
 	}
 
-	cmd := fmt.Sprintf("%s %s/ %s/",
+	var srcArg string
+	if step.Mountpoint == "/" {
+		// For the root filesystem, pass "/" without an extra trailing slash to
+		// avoid confusing path matching in rsync.
+		srcArg = srcPath
+	} else {
+		srcArg = srcPath + "/"
+	}
+
+	cmd := fmt.Sprintf("%s %s %s/",
 		strings.Join(args, " "),
-		srcPath,
+		srcArg,
 		dstPath,
 	)
 	return cmd, nil

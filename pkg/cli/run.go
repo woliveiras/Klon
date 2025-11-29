@@ -266,11 +266,10 @@ func parseFlags(args []string) (Options, []string, error) {
 
 // interactiveWizard asks a minimal set of questions to obtain safe defaults
 // for a clone run. For now, it asks for a destination disk and whether the
-// user wants to initialize the destination (like -f / -f2), and always
-// runs in plan mode (no writes).
+// user wants to initialize the destination (equivalent to the -f / -f2 flags).
 func interactiveWizard(ui UI) (Options, error) {
 	ui.Println("Welcome to Klon interactive mode.")
-	ui.Println("For now, Klon will only compute and display a clone plan (no writes).")
+	ui.Println("Klon will first compute a clone plan, show it, and only run it after your confirmation.")
 
 	dest, err := ui.Ask("Destination disk (e.g. sda, nvme0n1): ")
 	if err != nil {
@@ -289,14 +288,14 @@ func interactiveWizard(ui UI) (Options, error) {
 		return Options{}, fmt.Errorf("interactive clone cancelled by user")
 	}
 
-	init, err := ui.Confirm("Reset and prepare the destination disk now? This will erase all data on the chosen disk. (yes/no): ")
+	init, err := ui.Confirm("Reset and prepare the destination disk now? This will erase all data on the chosen disk.")
 	if err != nil {
 		return Options{}, err
 	}
 
 	forceTwo := false
 	if init {
-		forceTwo, err = ui.Confirm("Use only the first two partitions (boot and root) on the destination disk? (yes/no): ")
+		forceTwo, err = ui.Confirm("Use only the first two partitions (boot and root) on the destination disk?")
 		if err != nil {
 			return Options{}, err
 		}
