@@ -289,14 +289,14 @@ func interactiveWizard(ui UI) (Options, error) {
 		return Options{}, fmt.Errorf("interactive clone cancelled by user")
 	}
 
-	init, err := ui.Confirm("Initialize destination partition table like -f?")
+	init, err := ui.Confirm("Reset and prepare the destination disk now? This will erase all data on the chosen disk. (yes/no): ")
 	if err != nil {
 		return Options{}, err
 	}
 
 	forceTwo := false
 	if init {
-		forceTwo, err = ui.Confirm("Initialize only the first two partitions like -f2?")
+		forceTwo, err = ui.Confirm("Use only the first two partitions (boot and root) on the destination disk? (yes/no): ")
 		if err != nil {
 			return Options{}, err
 		}

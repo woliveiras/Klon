@@ -37,7 +37,8 @@ Klon will:
 
 - detect the boot disk,
 - ask which destination disk to use (e.g. `sda`, `nvme0n1`),
-- ask whether to initialize the destination (equivalent to `-f` / `-f2`),
+- ask whether to reset and prepare the destination disk (this will erase all data on it),
+- ask whether to use only the first two partitions (boot and root) or the whole disk,
 - ask how to prepare the partition table (clone existing layout or new layout),
 - show a detailed clone plan and the execution steps (plan-only).
 
@@ -141,7 +142,8 @@ On a Raspberry Pi, the two main usage modes are:
   Klon will:
   - detect the boot disk,
   - ask you which destination disk to use (e.g. `sda`, `nvme0n1`),
-  - ask whether to initialize the destination (equivalent to `-f` / `-f2`),
+  - ask whether to reset and prepare the destination disk (this will erase all data on it),
+  - ask whether to use only the first two partitions (boot and root) or the whole disk,
   - ask how to prepare the partition table (clone existing layout or new layout),
   - show a detailed clone plan and the execution steps (plan-only),
   - then ask if you want to apply the plan; if you confirm, it will perform the clone.

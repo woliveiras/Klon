@@ -45,9 +45,9 @@ There are two primary usage styles:
      - Asks the user to select a destination safely (e.g. by index, with size
        and device name shown).
      - Asks high-level questions that map to flags/options:
-       - Initialize disk (equivalent to `-f` / `-f2`) or just sync?
-       - Resize `/boot` partition and to what size?
-       - Quiet/verbose mode?
+       - Whether to reset and prepare the destination disk (this will erase all data on it).
+       - Whether to use only the first two partitions (boot and root) or the whole disk.
+       - Quiet/verbose mode.
        - Unattended vs. confirm-everything.
      - Builds an internal options structure equivalent to what direct mode
        would receive.
