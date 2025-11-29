@@ -146,17 +146,29 @@ Planning:
 
 Execution:
 
-- `ExecutionStep` – human-readable description of a concrete action
-  (e.g. `"initialize+sync from /dev/mmcblk0p1 to sda (partition 1) mounted on /boot"`).
+- `ExecutionStep` – structured + human-readable description of a concrete
+  action. Includes:
+  - `Operation` (e.g. `"prepare-disk"`, `"sync-filesystem"`,
+    `"initialize-partition"`),
+  - `SourceDevice`, `DestinationDisk`, `PartitionIndex`, `Mountpoint`,
+  - `Description` (for logs).
 - `BuildExecutionSteps(plan, opts)` – converts a `PlanResult` into a list of
-  `ExecutionStep` values.
+  `ExecutionStep` values, including:
+  - A `"prepare-disk"` step when `Initialize` is true.
+  - One step per partition, usually `"sync-filesystem"` or
+    `"initialize-partition"`.
 - `Runner` interface – abstracts how steps are actually performed:
   - `Run(step ExecutionStep) error`.
 - `Execute(plan, opts, runner)` – iterates over the steps and delegates to
   the `Runner`.
-  - At this stage, the CLI wires a **logging runner** that prints
-    `EXECUTE: <description>` for each step when `--execute` is used and
-    the `GOPI_ALLOW_WRITE=1` environment variable is set.
+  - At this stage, the CLI wires a **command-logging runner** when
+    `--execute` is used (and `GOPI_ALLOW_WRITE=1` is set) that:
+    - For `"prepare-disk"` operations, prints a `# TODO: ...` line showing
+      how the partition table would be prepared.
+    - For `"sync-filesystem"` operations, prints a `rsync` command line
+      showing how files would be synchronized to the destination root
+      (configurable via `--dest-root`).
+    - For other operations, falls back to the generic `Description`.
   - Actual disk writes will be implemented later behind this interface in a
     dedicated `Runner` implementation, keeping safety and testability.
 
