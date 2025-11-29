@@ -171,6 +171,7 @@ On a Raspberry Pi, the two main usage modes are:
     mounted when executing/logging sync steps (default: `/mnt/clone`).
   - `--exclude` – comma-separated patterns to exclude from `rsync` (e.g. `--exclude "/var/log/*,/home/*/.cache"`).
   - `--exclude-from` – comma-separated list of files with `rsync` exclude patterns.
+  - `--log-file` – append internal logs (`klon: EXEC: ...`, `klon: OUTPUT: ...`) to a file instead of stderr.
 
   When running via `go run`, you can still apply in a single step:
 
@@ -189,6 +190,17 @@ On a Raspberry Pi, the two main usage modes are:
   - unmount the partitions again.
 
   Use this only with a destination disk you are prepared to completely overwrite.
+
+If you want to keep a permanent log of what Klon did, you can combine it with `--log-file`. For example:
+
+```bash
+sudo klon -f --dest-root /mnt/clone --log-file /var/log/klon.log sda
+```
+
+In this case:
+
+- The plan and confirmation prompt appear in your terminal.
+- All internal commands and outputs are also appended to `/var/log/klon.log`, which you can inspect later or collect via your logging stack.
 
 ### Running unit tests
 

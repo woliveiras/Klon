@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 
@@ -26,6 +27,7 @@ type Options struct {
 	ExcludePatterns      []string
 	ExcludeFromFiles     []string
 	Hostname             string
+	LogFile              string
 }
 
 // UI abstracts user interaction so we can support both interactive
@@ -96,6 +98,15 @@ func run(args []string, ui UI) error {
 	opts, rest, err := parseFlags(args)
 	if err != nil {
 		return err
+	}
+
+	if opts.LogFile != "" {
+		f, err := os.OpenFile(opts.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+		if err != nil {
+			return fmt.Errorf("cannot open log file %s: %w", opts.LogFile, err)
+		}
+		defer f.Close()
+		log.SetOutput(f)
 	}
 
 	if len(rest) < 1 {
@@ -210,6 +221,7 @@ func parseFlags(args []string) (Options, []string, error) {
 	fs.StringVar(&excludeList, "exclude", "", "comma-separated patterns to exclude from rsync")
 	fs.StringVar(&excludeFromList, "exclude-from", "", "comma-separated files with rsync exclude patterns")
 	fs.StringVar(&opts.Hostname, "hostname", "", "set hostname on cloned system")
+	fs.StringVar(&opts.LogFile, "log-file", "", "append logs to this file instead of stderr")
 
 	if err := fs.Parse(args[1:]); err != nil {
 		return Options{}, nil, err
