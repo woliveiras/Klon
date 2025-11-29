@@ -81,6 +81,17 @@ On a Raspberry Pi, the two main usage modes are:
   - `-q` – quiet mode (implies unattended; relevant in future non-dry-run mode).
   - `-u`, `-U` – unattended modes (reserved for future non-dry-run behaviour).
   - `-v` – verbose: prints planned execution steps in addition to the plan.
+  - `--execute` – run the planned steps through the execution pipeline
+    (currently **logging-only**) and requires `GOPI_ALLOW_WRITE=1` to be set.
+
+  Example of protected execute mode:
+
+  ```bash
+  GOPI_ALLOW_WRITE=1 go run . --execute sda
+  ```
+
+  This will run through the `Execute` pipeline and log each step with an
+  `EXECUTE:` prefix, but still does not perform real disk writes.
 
 ### Running unit tests
 

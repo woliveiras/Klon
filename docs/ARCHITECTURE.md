@@ -154,8 +154,12 @@ Execution:
 - `Runner` interface – abstracts how steps are actually performed:
   - `Run(step ExecutionStep) error`.
 - `Execute(plan, opts, runner)` – iterates over the steps and delegates to
-  the `Runner`. At this stage, only a fake/logging runner is expected; actual
-  disk writes will be implemented later behind this interface.
+  the `Runner`.
+  - At this stage, the CLI wires a **logging runner** that prints
+    `EXECUTE: <description>` for each step when `--execute` is used and
+    the `GOPI_ALLOW_WRITE=1` environment variable is set.
+  - Actual disk writes will be implemented later behind this interface in a
+    dedicated `Runner` implementation, keeping safety and testability.
 
 ## Test-Driven Development (TDD)
 
