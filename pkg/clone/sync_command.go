@@ -32,7 +32,11 @@ func BuildSyncCommand(step ExecutionStep, destRoot string, extraExcludes []strin
 		dstPath = filepath.Join(destRoot, trimmed)
 	}
 
-	args := []string{"rsync", "-aAXH", "--delete"}
+	// Base rsync options for local clone:
+	// -aAXH          : archive + ACLs + xattrs + hard links
+	// --numeric-ids  : do not map user/group names
+	// --whole-file   : skip delta algorithm for local copies
+	args := []string{"rsync", "-aAXH", "--numeric-ids", "--whole-file"}
 
 	for _, p := range extraExcludes {
 		args = append(args, "--exclude", p)
@@ -62,6 +66,16 @@ func BuildSyncCommand(step ExecutionStep, destRoot string, extraExcludes []strin
 			// under / when mounted (for example, /mnt/clone).
 			excludes = append(excludes, destRoot+"/**")
 		}
+
+		// Avoid copying large, mostly irrelevant runtime and cache directories
+		// from the running system by default. Users can override this via
+		// --exclude/--exclude-from flags.
+		excludes = append(excludes,
+			"/var/cache/**",
+			"/var/tmp/**",
+			"/var/log/journal/**",
+			"/home/*/.cache/**",
+		)
 		for _, e := range excludes {
 			args = append(args, "--exclude", e)
 		}

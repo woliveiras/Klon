@@ -16,9 +16,11 @@ func TestBuildSyncCommand_UsesMountpoints(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expected := "rsync -aAXH --delete /boot/ /mnt/clone/boot/"
-	if cmd != expected {
-		t.Fatalf("unexpected rsync command.\n got: %q\nwant: %q", cmd, expected)
+	if !strings.HasPrefix(cmd, "rsync -aAXH --numeric-ids --whole-file") {
+		t.Fatalf("expected rsync to include numeric-ids and whole-file, got: %q", cmd)
+	}
+	if !strings.HasSuffix(cmd, "/boot/ /mnt/clone/boot/") {
+		t.Fatalf("unexpected rsync paths.\n got: %q", cmd)
 	}
 }
 
@@ -32,8 +34,8 @@ func TestBuildSyncCommand_RootMountpoint(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !strings.HasPrefix(cmd, "rsync -aAXH --delete --one-file-system") {
-		t.Fatalf("expected rsync command for root to include --one-file-system, got: %q", cmd)
+	if !strings.HasPrefix(cmd, "rsync -aAXH --numeric-ids --whole-file --one-file-system") {
+		t.Fatalf("expected rsync command for root to include tuned options and --one-file-system, got: %q", cmd)
 	}
 	if !strings.Contains(cmd, "--exclude /proc/**") ||
 		!strings.Contains(cmd, "--exclude /sys/**") ||

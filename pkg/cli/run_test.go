@@ -174,7 +174,7 @@ func TestInteractiveWizard_NewLayoutStrategy(t *testing.T) {
 }
 
 func TestParseFlags_ParsesCoreOptions(t *testing.T) {
-	opts, rest, err := parseFlags([]string{"klon", "-f", "-f2", "-q", "-u", "-U", "-v", "--auto-approve", "--expand-root", "--dest-root", "/custom/clone", "sda"})
+	opts, rest, err := parseFlags([]string{"klon", "-f", "-f2", "-q", "-u", "-U", "-v", "--auto-approve", "--expand-root", "--delete-dest", "--dest-root", "/custom/clone", "sda"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -205,6 +205,9 @@ func TestParseFlags_ParsesCoreOptions(t *testing.T) {
 	}
 	if !opts.ExpandLastPartition {
 		t.Fatalf("expected ExpandLastPartition to be true")
+	}
+	if !opts.DeleteDest {
+		t.Fatalf("expected DeleteDest to be true")
 	}
 	if opts.DestRoot != "/custom/clone" {
 		t.Fatalf("expected DestRoot to be /custom/clone, got %q", opts.DestRoot)
