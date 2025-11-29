@@ -93,6 +93,31 @@ func (r *loggingRunner) Run(step clone.ExecutionStep) error {
 	return nil
 }
 
+// commandLoggingRunner translates execution steps into concrete shell commands
+// (e.g. rsync) and logs them. It does not execute anything.
+type commandLoggingRunner struct {
+	ui       UI
+	destRoot string
+}
+
+func (r *commandLoggingRunner) Run(step clone.ExecutionStep) error {
+	switch step.Operation {
+	case "sync-filesystem":
+		cmd, err := clone.BuildSyncCommand(step, r.destRoot)
+		if err != nil {
+			// If we cannot build a concrete command (e.g. missing mountpoint),
+			// fall back to the generic description to avoid failing the run.
+			r.ui.Println("EXECUTE:", step.Description)
+			return nil
+		}
+		r.ui.Println("EXECUTE:", cmd)
+	default:
+		// Fallback to the generic description.
+		r.ui.Println("EXECUTE:", step.Description)
+	}
+	return nil
+}
+
 // run is the internal implementation that allows injecting a custom UI
 // (useful for tests and, later, different front-ends).
 func run(args []string, ui UI) error {
@@ -136,7 +161,10 @@ func run(args []string, ui UI) error {
 		if os.Getenv("GOPI_ALLOW_WRITE") != "1" {
 			return fmt.Errorf("execute mode is protected; set GOPI_ALLOW_WRITE=1 to enable")
 		}
-		runner := &loggingRunner{ui: ui}
+		runner := &commandLoggingRunner{
+			ui:       ui,
+			destRoot: "/mnt/clone",
+		}
 		return clone.Execute(plan, planOpts, runner)
 	}
 
