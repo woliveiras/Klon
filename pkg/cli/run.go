@@ -128,6 +128,24 @@ func run(args []string, ui UI) error {
 		if os.Getenv("GOPI_ALLOW_WRITE") != "1" {
 			return fmt.Errorf("execute mode is protected; set GOPI_ALLOW_WRITE=1 to enable")
 		}
+		if err := clone.ValidateCloneSafety(plan, planOpts); err != nil {
+			return err
+		}
+
+		ui.Println(plan.String())
+		ui.Println("Planned execution steps:")
+		steps := clone.BuildExecutionSteps(plan, planOpts)
+		for _, step := range steps {
+			ui.Println("  -", step.Operation, ":", step.Description)
+		}
+		ok, err := ui.Confirm("Proceed with executing these steps on the destination disk?")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("execution cancelled by user")
+		}
+
 		runner := clone.NewCommandRunner(opts.DestRoot, opts.PartitionStrategy)
 		return clone.Execute(plan, planOpts, runner)
 	}
