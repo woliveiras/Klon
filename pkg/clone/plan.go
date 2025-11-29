@@ -13,6 +13,7 @@ type PlanOptions struct {
 // while the real implementation can use tools like lsblk, findmnt, etc.
 type System interface {
 	BootDisk() (string, error)
+	MountedPartitions(disk string) ([]MountedPartition, error)
 }
 
 // DefaultSystem is used by Plan. It can be replaced in tests if needed.
@@ -27,7 +28,9 @@ type PlanResult struct {
 }
 
 type PartitionPlan struct {
-	Index int
+	Index      int
+	Device     string
+	Mountpoint string
 	// For now only basic labels; later we can add FS type, sizes, etc.
 	Action string
 }
@@ -49,19 +52,40 @@ func PlanWithSystem(sys System, opts PlanOptions) (PlanResult, error) {
 		return PlanResult{}, fmt.Errorf("destination disk cannot be empty")
 	}
 
-	src, err := sys.BootDisk()
+	srcDev, err := sys.BootDisk()
 	if err != nil {
 		return PlanResult{}, fmt.Errorf("failed to detect boot disk: %w", err)
 	}
 
-	// Placeholder behaviour: just return a minimal plan referencing the given destination.
-	return PlanResult{
-		SourceDisk:      src,
-		DestinationDisk: opts.Destination,
-		Partitions: []PartitionPlan{
+	srcDisk := baseDiskFromDevice(srcDev)
+
+	parts, err := sys.MountedPartitions(srcDisk)
+	if err != nil {
+		return PlanResult{}, fmt.Errorf("failed to detect mounted partitions: %w", err)
+	}
+
+	var planParts []PartitionPlan
+	for idx, p := range parts {
+		planParts = append(planParts, PartitionPlan{
+			Index:      idx + 1,
+			Device:     p.Device,
+			Mountpoint: p.Mountpoint,
+			Action:     "sync",
+		})
+	}
+
+	// If we couldn't detect any partitions, fall back to a minimal stub.
+	if len(planParts) == 0 {
+		planParts = []PartitionPlan{
 			{Index: 1, Action: "sync"},
 			{Index: 2, Action: "sync"},
-		},
+		}
+	}
+
+	return PlanResult{
+		SourceDisk:      srcDisk,
+		DestinationDisk: opts.Destination,
+		Partitions:      planParts,
 	}, nil
 }
 
