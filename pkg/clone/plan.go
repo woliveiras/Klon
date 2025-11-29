@@ -18,6 +18,7 @@ type PlanOptions struct {
 	PartitionStrategy string
 	ExcludePatterns   []string
 	ExcludeFromFiles  []string
+	Hostname          string
 }
 
 // System abstracts how we discover information about disks and partitions

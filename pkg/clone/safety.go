@@ -86,3 +86,12 @@ func diskSizeBytes(dev string) (uint64, error) {
 	return val, nil
 }
 
+func partUUID(dev string) (string, error) {
+	dev = ensureDevPrefix(dev)
+	cmd := exec.Command("lsblk", "-no", "PARTUUID", dev)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("lsblk PARTUUID failed for %s: %w", dev, err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}

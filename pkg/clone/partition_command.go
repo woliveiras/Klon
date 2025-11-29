@@ -1,9 +1,6 @@
 package clone
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
 // BuildPartitionCommand builds the command that will prepare the destination
 // disk partition table for a clone operation. It does not execute anything.
@@ -34,9 +31,8 @@ func ensureDevPrefix(name string) string {
 	if name == "" {
 		return ""
 	}
-	if strings.HasPrefix(name, "/dev/") {
+	if len(name) >= 5 && name[:5] == "/dev/" {
 		return name
 	}
 	return "/dev/" + name
 }
-

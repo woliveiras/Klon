@@ -27,6 +27,7 @@ type Options struct {
 	PartitionStrategy    string
 	ExcludePatterns      []string
 	ExcludeFromFiles     []string
+	Hostname             string
 }
 
 // UI abstracts user interaction so we can support both interactive
@@ -121,6 +122,7 @@ func run(args []string, ui UI) error {
 		PartitionStrategy:  opts.PartitionStrategy,
 		ExcludePatterns:    opts.ExcludePatterns,
 		ExcludeFromFiles:   opts.ExcludeFromFiles,
+		Hostname:           opts.Hostname,
 	}
 
 	plan, err := clone.Plan(planOpts)
@@ -166,7 +168,14 @@ func run(args []string, ui UI) error {
 		}
 
 		runner := clone.NewCommandRunner(opts.DestRoot, opts.PartitionStrategy, planOpts.ExcludePatterns, planOpts.ExcludeFromFiles)
-		return clone.Execute(plan, planOpts, runner)
+		if err := clone.Execute(plan, planOpts, runner); err != nil {
+			return err
+		}
+
+		if err := clone.AdjustSystem(plan, planOpts, opts.DestRoot); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	if opts.DryRun {
@@ -209,6 +218,7 @@ func parseFlags(args []string) (Options, []string, error) {
 	fs.BoolVar(&opts.Verbose, "v", false, "verbose mode")
 	fs.StringVar(&excludeList, "exclude", "", "comma-separated patterns to exclude from rsync")
 	fs.StringVar(&excludeFromList, "exclude-from", "", "comma-separated files with rsync exclude patterns")
+	fs.StringVar(&opts.Hostname, "hostname", "", "set hostname on cloned system")
 
 	if err := fs.Parse(args[1:]); err != nil {
 		return Options{}, nil, err
