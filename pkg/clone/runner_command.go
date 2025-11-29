@@ -3,7 +3,9 @@ package clone
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -53,6 +55,29 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 		log.Printf("gopi: skipping sync-filesystem for %s: empty mountpoint", step.SourceDevice)
 		return nil
 	}
+
+	destPath := r.DestRoot
+	if step.Mountpoint != "/" {
+		trimmed := strings.TrimPrefix(step.Mountpoint, "/")
+		destPath = filepath.Join(r.DestRoot, trimmed)
+	}
+
+	if err := os.MkdirAll(destPath, 0o755); err != nil {
+		return fmt.Errorf("sync-filesystem: cannot create destination dir %s: %w", destPath, err)
+	}
+
+	dstPart := partitionDevice(step.DestinationDisk, step.PartitionIndex)
+	mountCmd := fmt.Sprintf("mount %s %s", dstPart, destPath)
+	if err := runShellCommand(mountCmd); err != nil {
+		return fmt.Errorf("sync-filesystem: mount failed for %s on %s: %w", dstPart, destPath, err)
+	}
+	defer func() {
+		umountCmd := fmt.Sprintf("umount %s", destPath)
+		if err := runShellCommand(umountCmd); err != nil {
+			log.Printf("gopi: WARNING: failed to unmount %s: %v", destPath, err)
+		}
+	}()
+
 	cmdStr, err := BuildSyncCommand(step, r.DestRoot)
 	if err != nil {
 		return err

@@ -1,6 +1,9 @@
 package clone
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestBuildSyncCommand_UsesMountpoints(t *testing.T) {
 	step := ExecutionStep{
@@ -13,9 +16,9 @@ func TestBuildSyncCommand_UsesMountpoints(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expectedFragment := "rsync -aAXH --delete /boot/ /mnt/clone/boot/"
-	if cmd != expectedFragment {
-		t.Fatalf("unexpected rsync command.\n got: %q\nwant: %q", cmd, expectedFragment)
+	expected := "rsync -aAXH --delete /boot/ /mnt/clone/boot/"
+	if cmd != expected {
+		t.Fatalf("unexpected rsync command.\n got: %q\nwant: %q", cmd, expected)
 	}
 }
 
@@ -30,9 +33,8 @@ func TestBuildSyncCommand_RootMountpoint(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expectedFragment := "rsync -aAXH --delete // /mnt/clone/"
-	if cmd != expectedFragment {
-		t.Fatalf("unexpected rsync command for root.\n got: %q\nwant: %q", cmd, expectedFragment)
+	expectedPrefix := "rsync -aAXH --delete --exclude /proc/* --exclude /sys/* --exclude /dev/*"
+	if !strings.HasPrefix(cmd, expectedPrefix) {
+		t.Fatalf("expected rsync command for root to start with %q, got: %q", expectedPrefix, cmd)
 	}
 }
-

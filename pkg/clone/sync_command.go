@@ -32,11 +32,31 @@ func BuildSyncCommand(step ExecutionStep, destRoot string) (string, error) {
 		dstPath = filepath.Join(destRoot, trimmed)
 	}
 
-	cmd := fmt.Sprintf(
-		"rsync -aAXH --delete %s/ %s/",
+	args := []string{"rsync", "-aAXH", "--delete"}
+
+	// When syncing the root filesystem, exclude pseudo filesystems and the
+	// destination root itself to avoid recursion.
+	if step.Mountpoint == "/" {
+		excludes := []string{
+			"/proc/*",
+			"/sys/*",
+			"/dev/*",
+			"/run/*",
+			"/tmp/*",
+			"/mnt/*",
+		}
+		if destRoot != "" {
+			excludes = append(excludes, destRoot+"/*")
+		}
+		for _, e := range excludes {
+			args = append(args, "--exclude", e)
+		}
+	}
+
+	cmd := fmt.Sprintf("%s %s/ %s/",
+		strings.Join(args, " "),
 		srcPath,
 		dstPath,
 	)
 	return cmd, nil
 }
-

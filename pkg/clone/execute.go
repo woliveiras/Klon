@@ -61,18 +61,24 @@ func BuildExecutionSteps(plan PlanResult, opts PlanOptions) []ExecutionStep {
 			desc = fmt.Sprintf("%s mounted on %s", desc, part.Mountpoint)
 		}
 
-		op := "sync-filesystem"
 		if part.Action != "" && part.Action != "sync" {
-			op = "initialize-partition"
+			steps = append(steps, ExecutionStep{
+				Operation:       "initialize-partition",
+				SourceDevice:    src,
+				DestinationDisk: opts.Destination,
+				PartitionIndex:  part.Index,
+				Mountpoint:      part.Mountpoint,
+				Description:     "initialize " + desc,
+			})
 		}
 
 		steps = append(steps, ExecutionStep{
-			Operation:       op,
+			Operation:       "sync-filesystem",
 			SourceDevice:    src,
 			DestinationDisk: opts.Destination,
 			PartitionIndex:  part.Index,
 			Mountpoint:      part.Mountpoint,
-			Description:     desc,
+			Description:     "sync " + desc,
 		})
 	}
 
