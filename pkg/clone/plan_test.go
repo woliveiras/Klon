@@ -95,3 +95,62 @@ func TestPlanWithSystem_UsesMountedPartitions(t *testing.T) {
 		t.Fatalf("unexpected second partition in plan: %+v", plan.Partitions[1])
 	}
 }
+
+func TestPlanWithSystem_InitializeMarksActions(t *testing.T) {
+	sys := fakeSystem{
+		bootDisk: "/dev/mmcblk0p2",
+		mountedParts: []MountedPartition{
+			{Device: "/dev/mmcblk0p1", Mountpoint: "/boot"},
+			{Device: "/dev/mmcblk0p2", Mountpoint: "/"},
+		},
+	}
+	opts := PlanOptions{
+		Destination: "sda",
+		Initialize:  true,
+	}
+
+	plan, err := PlanWithSystem(sys, opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, part := range plan.Partitions {
+		if part.Action != "initialize+sync" {
+			t.Fatalf("expected action 'initialize+sync', got %q for %+v", part.Action, part)
+		}
+	}
+}
+
+func TestPlanWithSystem_ForceTwoPartitionsOnlyFirstTwoInitialized(t *testing.T) {
+	sys := fakeSystem{
+		bootDisk: "/dev/mmcblk0p3",
+		mountedParts: []MountedPartition{
+			{Device: "/dev/mmcblk0p1", Mountpoint: "/boot"},
+			{Device: "/dev/mmcblk0p2", Mountpoint: "/"},
+			{Device: "/dev/mmcblk0p3", Mountpoint: "/data"},
+		},
+	}
+	opts := PlanOptions{
+		Destination:        "sda",
+		Initialize:         true,
+		ForceTwoPartitions: true,
+	}
+
+	plan, err := PlanWithSystem(sys, opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(plan.Partitions) != 3 {
+		t.Fatalf("expected 3 partitions, got %d", len(plan.Partitions))
+	}
+
+	if plan.Partitions[0].Action != "initialize+sync" ||
+		plan.Partitions[1].Action != "initialize+sync" {
+		t.Fatalf("expected first two partitions to be 'initialize+sync', got %+v, %+v",
+			plan.Partitions[0], plan.Partitions[1])
+	}
+	if plan.Partitions[2].Action != "sync" {
+		t.Fatalf("expected third partition to be 'sync', got %+v", plan.Partitions[2])
+	}
+}

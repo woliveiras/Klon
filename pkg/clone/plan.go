@@ -88,6 +88,22 @@ func PlanWithSystem(sys System, opts PlanOptions) (PlanResult, error) {
 		}
 	}
 
+	// Apply high-level options to decide actions. This is still a simplified
+	// model of what rpi-clone does, but it already reflects the intent of
+	// initialize vs. plain sync.
+	if opts.Initialize {
+		for i := range planParts {
+			planParts[i].Action = "initialize+sync"
+		}
+		if opts.ForceTwoPartitions {
+			for i := range planParts {
+				if planParts[i].Index > 2 {
+					planParts[i].Action = "sync"
+				}
+			}
+		}
+	}
+
 	return PlanResult{
 		SourceDisk:      srcDisk,
 		DestinationDisk: opts.Destination,
