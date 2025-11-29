@@ -207,6 +207,11 @@ func run(args []string, ui UI) error {
 		return err
 	}
 
+	if err := clone.VerifyClone(plan, planOpts, opts.DestRoot); err != nil {
+		_ = clone.AppendStateLog("kln.state", plan, planOpts, steps, "APPLY_FAILED", err)
+		return err
+	}
+
 	_ = clone.AppendStateLog("kln.state", plan, planOpts, steps, "APPLY_SUCCESS", nil)
 
 	ui.Println(plan.String())
