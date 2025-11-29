@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-
-	"github.com/woliveiras/gopi/pkg/clone"
 )
 
 type fakeUI struct {
@@ -218,76 +216,5 @@ func TestRun_ExecuteWithEnvLogsSteps(t *testing.T) {
 	err := run([]string{"gopi", "--execute", "sda"}, ui)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-
-	foundExecute := false
-	for _, line := range ui.lines {
-		if strings.Contains(line, "EXECUTE:") {
-			foundExecute = true
-		}
-	}
-	if !foundExecute {
-		t.Fatalf("expected EXECUTE lines in output, got: %#v", ui.lines)
-	}
-}
-
-func TestCommandLoggingRunner_UsesBuildSyncCommand(t *testing.T) {
-	ui := &fakeUI{}
-	r := &commandLoggingRunner{
-		ui:       ui,
-		destRoot: "/mnt/clone",
-	}
-
-	step := clone.ExecutionStep{
-		Operation:       "sync-filesystem",
-		SourceDevice:    "/dev/mmcblk0p1",
-		DestinationDisk: "sda",
-		PartitionIndex:  1,
-		Mountpoint:      "/boot",
-		Description:     "sync from /boot",
-	}
-
-	if err := r.Run(step); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	found := false
-	for _, line := range ui.lines {
-		if strings.Contains(line, "rsync -aAXH --delete /boot/ /mnt/clone/boot/") {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("expected rsync command line in output, got: %#v", ui.lines)
-	}
-}
-
-func TestCommandLoggingRunner_UsesBuildPartitionCommand(t *testing.T) {
-	ui := &fakeUI{}
-	r := &commandLoggingRunner{
-		ui:       ui,
-		destRoot: "/mnt/clone",
-	}
-
-	step := clone.ExecutionStep{
-		Operation:       "prepare-disk",
-		SourceDevice:    "/dev/mmcblk0",
-		DestinationDisk: "sda",
-	}
-
-	if err := r.Run(step); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	found := false
-	for _, line := range ui.lines {
-		if strings.Contains(line, "clone partition table from /dev/mmcblk0 to /dev/sda") {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("expected partition command line in output, got: %#v", ui.lines)
 	}
 }

@@ -163,8 +163,8 @@ Execution:
   the `Runner`.
   - At this stage, the CLI wires a **command-logging runner** when
     `--execute` is used (and `GOPI_ALLOW_WRITE=1` is set) that:
-    - For `"prepare-disk"` operations, prints a `# TODO: ...` line showing
-      how the partition table would be prepared.
+    - For `"prepare-disk"` operations, prints the concrete command that
+      would prepare the partition table.
     - For `"sync-filesystem"` operations, prints a `rsync` command line
       showing how files would be synchronized to the destination root
       (configurable via `--dest-root`).
