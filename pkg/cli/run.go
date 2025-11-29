@@ -16,6 +16,7 @@ type Options struct {
 	Destination          string
 	DryRun               bool
 	Execute              bool
+	DestRoot             string
 	Initialize           bool // -f
 	ForceTwoPartitions   bool // -f2
 	BootPartitionSizeArg string
@@ -163,7 +164,7 @@ func run(args []string, ui UI) error {
 		}
 		runner := &commandLoggingRunner{
 			ui:       ui,
-			destRoot: "/mnt/clone",
+			destRoot: opts.DestRoot,
 		}
 		return clone.Execute(plan, planOpts, runner)
 	}
@@ -190,11 +191,13 @@ func run(args []string, ui UI) error {
 func parseFlags(args []string) (Options, []string, error) {
 	fs := flag.NewFlagSet("gopi", flag.ContinueOnError)
 	opts := Options{
-		DryRun: true,
+		DryRun:   true,
+		DestRoot: "/mnt/clone",
 	}
 
 	fs.BoolVar(&opts.DryRun, "dry-run", true, "show what would be cloned without making changes")
 	fs.BoolVar(&opts.Execute, "execute", false, "execute planned steps (requires GOPI_ALLOW_WRITE=1)")
+	fs.StringVar(&opts.DestRoot, "dest-root", "/mnt/clone", "destination root mountpoint for clone (for execute/logging)")
 
 	fs.BoolVar(&opts.Initialize, "f", false, "force initialize destination partition table from source disk")
 	fs.BoolVar(&opts.ForceTwoPartitions, "f2", false, "force initialize only the first two partitions")

@@ -166,7 +166,7 @@ func TestInteractiveWizard_NewLayoutStrategy(t *testing.T) {
 }
 
 func TestParseFlags_ParsesCoreOptions(t *testing.T) {
-	opts, rest, err := parseFlags([]string{"gopi", "-f", "-f2", "-q", "-u", "-U", "-v", "--execute", "sda"})
+	opts, rest, err := parseFlags([]string{"gopi", "-f", "-f2", "-q", "-u", "-U", "-v", "--execute", "--dest-root", "/custom/clone", "sda"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -194,6 +194,9 @@ func TestParseFlags_ParsesCoreOptions(t *testing.T) {
 	}
 	if !opts.Execute {
 		t.Fatalf("expected Execute to be true")
+	}
+	if opts.DestRoot != "/custom/clone" {
+		t.Fatalf("expected DestRoot to be /custom/clone, got %q", opts.DestRoot)
 	}
 }
 

@@ -83,11 +83,13 @@ On a Raspberry Pi, the two main usage modes are:
   - `-v` – verbose: prints planned execution steps in addition to the plan.
   - `--execute` – run the planned steps through the execution pipeline
     (currently **logging-only**) and requires `GOPI_ALLOW_WRITE=1` to be set.
+  - `--dest-root` – directory where destination partitions are (or will be)
+    mounted when executing/logging sync steps (default: `/mnt/clone`).
 
   Example of protected execute mode:
 
   ```bash
-  GOPI_ALLOW_WRITE=1 go run . --execute sda
+  GOPI_ALLOW_WRITE=1 go run . --execute --dest-root /mnt/clone sda
   ```
 
   This will run through the `Execute` pipeline and log each step with an
