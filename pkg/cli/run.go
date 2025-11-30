@@ -19,6 +19,7 @@ type Options struct {
 	ForceTwoPartitions   bool // -f2
 	ExpandLastPartition  bool // --expand-root
 	BootPartitionSizeArg string
+	ForceSync            bool // -F
 	Quiet                bool // -q
 	Unattended           bool // -u
 	UnattendedInit       bool // -U
@@ -135,6 +136,7 @@ func run(args []string, ui UI) error {
 		ForceTwoPartitions:  opts.ForceTwoPartitions,
 		ExpandLastPartition: opts.ExpandLastPartition,
 		DeleteDest:          opts.DeleteDest,
+		ForceSync:           opts.ForceSync,
 		Quiet:               opts.Quiet,
 		Unattended:          opts.Unattended,
 		UnattendedInit:      opts.UnattendedInit,
@@ -239,6 +241,7 @@ func parseFlags(args []string) (Options, []string, error) {
 	fs.BoolVar(&opts.Initialize, "f", false, "force initialize destination partition table from source disk")
 	fs.BoolVar(&opts.ForceTwoPartitions, "f2", false, "force initialize only the first two partitions")
 	fs.BoolVar(&opts.ExpandLastPartition, "expand-root", false, "grow the last data partition on destination to use all remaining space")
+	fs.BoolVar(&opts.ForceSync, "F", false, "force clone even if size or mount checks warn (use with caution)")
 	fs.BoolVar(&opts.Quiet, "q", false, "quiet mode (implies unattended)")
 	fs.BoolVar(&opts.Unattended, "u", false, "unattended clone if not initializing")
 	fs.BoolVar(&opts.UnattendedInit, "U", false, "unattended even if initializing")

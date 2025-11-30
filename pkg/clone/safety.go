@@ -68,7 +68,9 @@ func ValidateCloneSafety(plan PlanResult, opts PlanOptions) error {
 	srcSize, _ := diskSizeBytes(srcDisk)
 	dstSize, _ := diskSizeBytes(dstDisk)
 	if srcSize > 0 && dstSize > 0 && dstSize < srcSize {
-		return fmt.Errorf("destination disk %s (%d bytes) is smaller than source disk %s (%d bytes). Use a larger disk or shrink the source first", dstDisk, dstSize, srcDisk, srcSize)
+		if !opts.ForceSync {
+			return fmt.Errorf("destination disk %s (%d bytes) is smaller than source disk %s (%d bytes). Use a larger disk or shrink the source first, or rerun with -F to force (may fail)", dstDisk, dstSize, srcDisk, srcSize)
+		}
 	}
 
 	if mountPoint, err := deviceMountpoint(dstDisk); err == nil && mountPoint != "" {

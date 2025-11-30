@@ -9,15 +9,16 @@ import (
 // PlanOptions represents the inputs required to compute a clone plan.
 // It mirrors, at a high level, the user-facing options parsed by the CLI.
 type PlanOptions struct {
-	Destination        string
-	Initialize         bool
-	ForceTwoPartitions bool
+	Destination         string
+	Initialize          bool
+	ForceTwoPartitions  bool
 	ExpandLastPartition bool
 	DeleteDest          bool
-	Quiet              bool
-	Unattended         bool
-	UnattendedInit     bool
-	Verbose            bool
+	ForceSync           bool
+	Quiet               bool
+	Unattended          bool
+	UnattendedInit      bool
+	Verbose             bool
 	// PartitionStrategy describes how the destination partition table should
 	// be prepared when Initialize is true. For now it is descriptive only.
 	// Examples: "clone-table", "new-layout".
