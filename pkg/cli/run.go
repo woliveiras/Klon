@@ -109,10 +109,6 @@ func run(args []string, ui UI) error {
 		return fmt.Errorf("no arguments provided")
 	}
 
-	if err := clone.CheckPrerequisites(); err != nil {
-		return fmt.Errorf("prerequisite check failed: %w", err)
-	}
-
 	opts, rest, err := parseFlags(args)
 	if err != nil {
 		return err
@@ -139,6 +135,14 @@ func run(args []string, ui UI) error {
 		opts = wizardOpts
 	} else {
 		opts.Destination = rest[0]
+	}
+
+	if !opts.NoopRunner {
+		if err := clone.CheckPrerequisites(); err != nil {
+			return fmt.Errorf("prerequisite check failed: %w", err)
+		}
+	} else if !opts.Quiet {
+		ui.Println("Skipping prerequisite checks because --noop-runner is enabled (no system commands will run).")
 	}
 
 	planOpts := clone.PlanOptions{
