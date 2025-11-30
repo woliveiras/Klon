@@ -203,6 +203,14 @@ func run(args []string, ui UI) error {
 		}
 	}
 
+	// In noop mode we stop after showing the plan; nothing is applied.
+	if opts.NoopRunner {
+		if !opts.Quiet {
+			ui.Println("Noop runner enabled: skipping apply/adjust/verify (no system commands run).")
+		}
+		return nil
+	}
+
 	// Decide confirmation behaviour based on quiet/unattended flags.
 	askConfirm := true
 	if opts.Quiet {
