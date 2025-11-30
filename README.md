@@ -94,6 +94,7 @@ Use this only with a destination disk you are prepared to completely overwrite.
 - `--exclude-from` – list of files with `rsync` exclude patterns (comma-separated).
 - `--hostname` – sets the hostname in the cloned system (adjusts `/etc/hostname` and `/etc/hosts`).
  - `--expand-root` – after cloning the partition table, grow the last data partition on the destination disk (usually the root filesystem) to use all remaining free space.
+ - `--delete-dest` – when syncing, delete files on the destination that do not exist on the source (maps to rsync `--delete`). Use with care.
 
 ## Development
 
@@ -217,3 +218,13 @@ go test ./...
 ```
 
 You can keep this command running in a watch mode by using external tools (like `entr`, `watchexec`, or your editor’s test runner) so that tests are executed automatically as you change the code.
+
+Alternatively, you can use the provided `Makefile` targets during development:
+
+```bash
+make test          # go test ./...
+make test-file FILE=./pkg/cli
+make test-watch    # requires entr
+make lint          # golangci-lint run ./... (if installed) or go vet ./...
+make build         # build klon for current platform
+```
