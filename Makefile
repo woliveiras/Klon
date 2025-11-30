@@ -39,7 +39,7 @@ push:
 	  echo "Detected VERSION=$${VERSION}"; \
 	else \
 	  VERSION="$(VERSION)"; \
-	fi; \
+	fi
 	@echo "Pushing branch and tags for $${VERSION}"
 	@git push origin main --follow-tags
 
