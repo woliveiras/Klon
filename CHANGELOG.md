@@ -1,3 +1,7 @@
+## v1.1.3 - 2025-11-30
+
+- chore: update make release (dd64c86)
+
 ## v1.1.2 - 2025-11-30
 
 - chore: add make (a04fe17)
