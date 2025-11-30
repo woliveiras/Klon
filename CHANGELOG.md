@@ -1,3 +1,7 @@
+## v1.2.0 - 2025-11-30
+
+- test(cli): fix example test imports and deterministic failure (bd85266)
+
 ## v1.1.7 - 2025-11-30
 
 - ci: use ncipollo/release-action for creating releases (562fc3d)
