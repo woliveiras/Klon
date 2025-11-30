@@ -1,6 +1,9 @@
 package clone
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestBuildPartitionCommand_CloneTable(t *testing.T) {
 	step := ExecutionStep{
@@ -24,10 +27,17 @@ func TestBuildPartitionCommand_NewLayout(t *testing.T) {
 		Operation:       "prepare-disk",
 		SourceDevice:    "/dev/mmcblk0",
 		DestinationDisk: "sda",
+		SizeBytes:       300 * 1024 * 1024, // 300MiB boot
 	}
 
 	cmd, err := BuildPartitionCommand(step, "new-layout")
-	if err == nil {
-		t.Fatalf("expected error for unsupported new-layout strategy, got command %q", cmd)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(cmd, "sfdisk /dev/sda") {
+		t.Fatalf("expected command to target /dev/sda, got %q", cmd)
+	}
+	if !strings.Contains(cmd, ",300M,c") {
+		t.Fatalf("expected boot size to reflect provided SizeBytes, got %q", cmd)
 	}
 }

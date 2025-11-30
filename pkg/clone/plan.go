@@ -34,6 +34,7 @@ type PlanOptions struct {
 	ExcludePatterns   []string
 	ExcludeFromFiles  []string
 	Hostname          string
+	DeleteRoot        bool
 }
 
 // System abstracts how we discover information about disks and partitions

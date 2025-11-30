@@ -21,9 +21,10 @@ type CommandRunner struct {
 	ExcludeFromFiles  []string
 	DestDisk          string
 	DeleteDest        bool
+	DeleteRoot        bool
 }
 
-func NewCommandRunner(destRoot, strategy string, excludePatterns, excludeFromFiles []string, destDisk string, deleteDest bool) *CommandRunner {
+func NewCommandRunner(destRoot, strategy string, excludePatterns, excludeFromFiles []string, destDisk string, deleteDest bool, deleteRoot bool) *CommandRunner {
 	return &CommandRunner{
 		DestRoot:          destRoot,
 		PartitionStrategy: strategy,
@@ -31,6 +32,7 @@ func NewCommandRunner(destRoot, strategy string, excludePatterns, excludeFromFil
 		ExcludeFromFiles:  excludeFromFiles,
 		DestDisk:          ensureDevPrefix(destDisk),
 		DeleteDest:        deleteDest,
+		DeleteRoot:        deleteRoot,
 	}
 }
 
@@ -181,7 +183,11 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 		if tempSrc != "" {
 			effectiveStep.Mountpoint = srcMount
 		}
-		cmdStr, err := BuildSyncCommand(effectiveStep, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles, r.DeleteDest)
+		deleteFlag := r.DeleteDest
+		if step.Mountpoint == "/" {
+			deleteFlag = r.DeleteRoot
+		}
+		cmdStr, err := BuildSyncCommand(effectiveStep, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles, deleteFlag)
 		if err != nil {
 			return fmt.Errorf("sync-filesystem on %s: cannot build rsync command: %w", step.DestinationDisk, err)
 		}

@@ -33,7 +33,8 @@ type Options struct {
 	Unattended           bool // -u
 	UnattendedInit       bool // -U
 	AutoApprove          bool // --auto-approve
-	DeleteDest           bool // --delete-dest
+	DeleteDest           bool // --delete-dest (non-root)
+	DeleteRoot           bool // --delete-root (apply delete on /)
 	Verbose              bool // -v
 	PartitionStrategy    string
 	ExcludePatterns      []string
@@ -154,6 +155,7 @@ func run(args []string, ui UI) error {
 		ConvertToPartuuid:   opts.ConvertToPartuuid,
 		LabelPartitions:     opts.LabelPartitions,
 		MountDirs:           opts.MountDirs,
+		DeleteRoot:          opts.DeleteRoot,
 		Quiet:               opts.Quiet,
 		Unattended:          opts.Unattended,
 		UnattendedInit:      opts.UnattendedInit,
@@ -221,7 +223,7 @@ func run(args []string, ui UI) error {
 		}
 	}
 
-	runner := clone.NewCommandRunner(opts.DestRoot, opts.PartitionStrategy, planOpts.ExcludePatterns, planOpts.ExcludeFromFiles, opts.Destination, opts.DeleteDest)
+	runner := clone.NewCommandRunner(opts.DestRoot, opts.PartitionStrategy, planOpts.ExcludePatterns, planOpts.ExcludeFromFiles, opts.Destination, opts.DeleteDest, opts.DeleteRoot)
 	if err := clone.Apply(plan, planOpts, runner); err != nil {
 		_ = clone.AppendStateLog("kln.state", plan, planOpts, steps, "APPLY_FAILED", err)
 		return err
@@ -265,7 +267,8 @@ func parseFlags(args []string) (Options, []string, error) {
 	fs.BoolVar(&opts.Unattended, "u", false, "unattended clone if not initializing")
 	fs.BoolVar(&opts.UnattendedInit, "U", false, "unattended even if initializing")
 	fs.BoolVar(&opts.AutoApprove, "auto-approve", false, "do not ask for confirmation before applying the plan")
-	fs.BoolVar(&opts.DeleteDest, "delete-dest", false, "delete files on destination that do not exist on source")
+	fs.BoolVar(&opts.DeleteDest, "delete-dest", false, "delete files on destination that do not exist on source (non-root)")
+	fs.BoolVar(&opts.DeleteRoot, "delete-root", false, "apply --delete on the root filesystem sync as well (dangerous)")
 	fs.BoolVar(&opts.AllSync, "a", false, "sync all partitions if types are compatible, not just mounted ones")
 	fs.BoolVar(&opts.LeaveSDUSB, "l", false, "leave SD to USB boot setup intact when cloning to SD from USB or vice-versa")
 	fs.BoolVar(&opts.ConvertToPartuuid, "convert-fstab-to-partuuid", false, "convert fstab entries to PARTUUID on the cloned system")

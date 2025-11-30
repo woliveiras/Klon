@@ -176,8 +176,11 @@ Execution:
   the `Runner`.
   - The CLI wires a **CommandRunner** when applying a plan that:
     - For `"prepare-disk"` operations:
-      - Uses `sfdisk -d <source> | sfdisk <dest>` to clone the partition
-        table when the strategy is `clone-table`.
+      - For `clone-table`, uses `sfdisk -d <source> | sfdisk <dest>` to clone
+        the partition table.
+      - For `new-layout`, creates a simple DOS label with a FAT32 boot (p1)
+        sized by `-p1-size` or 256MiB default, and an ext root (p2) filling
+        the rest.
     - For `"grow-partition"` operations (when `ExpandLastPartition` is true):
       - Uses `parted -s <dest> resizepart <n> 100%` to grow the last data
         partition (usually the root) so it uses all remaining free space on the
