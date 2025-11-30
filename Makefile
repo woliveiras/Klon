@@ -1,7 +1,9 @@
 SHELL := /bin/bash
-.PHONY: help test test-short test-file test-watch lint vet build build-linux check prepare push release
+.PHONY: help test test-short test-file test-watch lint vet build build-linux install check prepare push release
 .PHONY: cover cover-html
 
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
 
 help:
 	@echo "Usage: make <target> [VERSION=vX.Y.Z | RELEASE=major|minor|patch]"
@@ -14,6 +16,7 @@ help:
 	@echo "  vet           - run go vet ./..."
 	@echo "  build         - build klon for the current platform"
 	@echo "  build-linux   - build klon for linux/amd64 (override GOOS/GOARCH as needed)"
+	@echo "  install       - build and install klon to $(BINDIR) (override PREFIX/BINDIR)"
 	@echo "  cover         - run tests with coverage and write coverage.out"
 	@echo "  cover-html    - generate coverage.html from coverage.out"
 	@echo "  check         - ensure git is available and working tree is clean"
@@ -61,6 +64,11 @@ build:
 build-linux:
 	@echo "Building klon for linux/amd64 (override GOOS/GOARCH to change)..."
 	@GOOS=${GOOS:-linux} GOARCH=${GOARCH:-amd64} go build -o klon .
+
+install: build
+	@echo "Installing klon to $(BINDIR)..."
+	@install -d $(BINDIR)
+	@install -m 0755 klon $(BINDIR)/klon
 
 cover:
 	@echo "Running coverage (coverage.out)..."

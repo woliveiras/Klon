@@ -231,6 +231,12 @@ Limitations / notes:
 - `--delete-root` is destructive; default is to avoid delete on `/`.
 - Complex boot setups may need manual review (e.g., custom bootloader, multi-disk GPT).
 
+## Release and packaging
+
+- Release workflow builds Linux amd64/arm64 binaries, packages tarballs and `.deb` files, attaches them to GitHub Releases
+- Tarballs contain a single `klon` binary for drop-in installation to `/usr/local/bin`.
+- Debian packages install `klon` to `/usr/local/bin` and include a basic control file.
+
 ## Test-Driven Development (TDD)
 
 The project is being developed with tests first wherever possible.

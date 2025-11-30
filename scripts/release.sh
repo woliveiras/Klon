@@ -142,8 +142,18 @@ else
   printf "# Changelog\n\n%s" "$ENTRY" > CHANGELOG.md
 fi
 
+# Update README version snippet (e.g., VERSION=v1.2.3) so docs show the latest tag.
+if grep -qE "VERSION=v[0-9]+\.[0-9]+\.[0-9]+" README.md; then
+  tmp_readme=$(mktemp)
+  sed -E "s/VERSION=v[0-9]+\.[0-9]+\.[0-9]+/VERSION=${VERSION}/" README.md > "$tmp_readme"
+  mv "$tmp_readme" README.md
+else
+  echo "Warning: README.md does not contain a VERSION=vX.Y.Z snippet; skipping README version update."
+fi
+
 # Stage and commit changelog explicitly
 git add -- CHANGELOG.md
+git add -- README.md || true
 git commit -m "chore: release $VERSION"
 
 # Create an annotated tag so that `git push --follow-tags` will include it.

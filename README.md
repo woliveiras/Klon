@@ -2,20 +2,73 @@
 
 > From Greek κλώνος (klónos): a “shoot” or “branch” — a copy grown from the original.
 
-A tool to clone Raspberry Pi disks, written in Go. Inspired by the fantastic [rpi-clone](https://github.com/billw2/rpi-clone).
+A tool to clone Raspberry Pi disks, written in Go. Inspired by the fantastic [rpi-clone](https://github.com/billw2/rpi-clone) scripts.
 
-> ⚠️ Klon is under active development. It can **format and overwrite disks**. Every run first computes and shows a clone plan and then asks for confirmation before doing anything destructive. Only run it when you are sure about the destination disk.
+## Quick install on Raspberry Pi / Debian
 
-## Installation
-
-You can install it on a Raspberry Pi with:
+Before you start (Debian/Raspberry Pi OS):
 
 ```bash
-sudo apt update
-sudo apt install klon
+sudo apt-get update
+sudo apt-get install -y curl tar gzip dpkg make git golang
 ```
 
-This will install a `klon` binary in your `PATH`.
+Option A: download release artifacts
+
+- Pick the right architecture: Raspberry Pi 4/5 is usually `arm64`; PCs are `amd64`.
+- Download from the GitHub Releases page, or via CLI (example for arm64):
+  ```bash
+  VERSION=vX.Y.Z
+  ARCH=arm64   # or amd64
+  curl -L -o klon_${VERSION}_linux_${ARCH}.tar.gz \
+    https://github.com/woliveiras/klon/releases/download/${VERSION}/klon_${VERSION}_linux_${ARCH}.tar.gz
+  ```
+- Tarball install:
+  ```bash
+  sudo tar -C /usr/local/bin -xzvf klon_${VERSION}_linux_${ARCH}.tar.gz klon
+  klon --version
+  ```
+- Debian package install (Debian/Raspberry Pi OS/Ubuntu):
+  ```bash
+  curl -L -o klon_${VERSION}_linux_${ARCH}.deb \
+    https://github.com/woliveiras/klon/releases/download/${VERSION}/klon_${VERSION}_linux_${ARCH}.deb
+  sudo dpkg -i klon_${VERSION}_linux_${ARCH}.deb || sudo apt-get -f install -y
+  klon --version
+  ```
+- If your shell cannot find `klon`, ensure `/usr/local/bin` (tarball) or `/usr/bin` (deb) is in `PATH`:
+  ```bash
+  echo $PATH
+  ```
+
+These steps will install `klon` into your `PATH` and you can now run it with `sudo klon`.
+
+Option B: Download from GitHub with git clone and Makefile
+
+```bash
+git clone https://github.com/woliveiras/klon
+cd klon
+# Requires Go (>=1.25) and build tools (make, git) installed locally.
+make install          # builds and installs to /usr/local/bin/klon
+```
+
+If you prefer a different location, override PREFIX or BINDIR, e.g.:
+
+```bash
+make install PREFIX=/opt/klon       # installs to /opt/klon/bin/klon
+make install BINDIR=/usr/bin        # installs directly to /usr/bin
+```
+
+After installation, run `klon --help` to see usage information.
+
+Option C: Build from source without installing (system-wide)
+
+```bash
+git clone https://github.com/woliveiras/klon
+cd klon
+go run .
+```
+
+This runs Klon directly from source without installing it system-wide.
 
 ## Usage
 
@@ -27,7 +80,7 @@ You can run Klon in two main modes: interactive (recommended for normal humans) 
 
 Klon always computes a plan first and shows it before making changes. You can stop after seeing the plan (plan-only) or confirm to actually clone.
 
-1) Interactive mode (shows plan, then asks to confirm):
+1) Recommended mode: Interactive mode (shows plan, then asks to confirm):
 
 ```bash
 sudo klon
@@ -57,6 +110,23 @@ or, with more detailed output:
 sudo klon -v sda
 ```
 
+### Quick plan → apply on Raspberry Pi
+
+1) Show the plan only:
+```bash
+sudo klon
+```
+2) Apply with defaults (clone current layout to `sda`, erase it):
+```bash
+sudo klon -f --dest-root /mnt/clone sda
+```
+3) Grow the destination root to the full disk:
+```bash
+sudo klon -f --expand-root --dest-root /mnt/clone sda
+```
+
+Stop at the final confirmation to avoid writes, or use `--auto-approve` only when scripting and certain of the destination.
+
 ### Running a real clone
 
 To actually format the destination disk and copy the data, you must:
@@ -71,6 +141,7 @@ sudo klon -f --dest-root /mnt/clone sda
 ```
 
 This command will:
+
 - detect and validate the boot and destination disks,
 - clone the partition table from the boot disk to `/dev/sda` (because of `-f`),
 - resize the destination partition 1 right after cloning the table if you pass `-p1-size` (so the new layout is used for mkfs/sync),
@@ -82,9 +153,10 @@ This command will:
 
 Use this only with a destination disk you are prepared to completely overwrite.
 
-### Main command-line flags (overview)
+### Main command-line flags
 
 Partitioning:
+
 - `-f` / `-f2` – initialize table/FS; `-f2` limits to boot+root only.
 - `-p1-size 256M|1G` – resize destination partition 1 when initializing.
 - `--expand-root` – grow the last data partition to fill remaining space.
@@ -92,6 +164,7 @@ Partitioning:
 - `-m /foo,/bar` – sync only these mountpoints (root is always included).
 
 Safety/execution:
+
 - `-q` / `-u` / `-U` – quiet/unattended modes.
 - `--auto-approve` – skip final confirmation.
 - `-F` – force even if destination is smaller (may fail).
@@ -101,6 +174,7 @@ Safety/execution:
   In noop mode Klon skips prerequisites, safety checks, apply, and verify, and just prints the plan.
 
 Post-clone/system:
+
 - `--hostname` – set hostname and `/etc/hosts` in the clone.
 - `-e/--edit-fstab sdX` – rewrite fstab device names with the given disk prefix.
 - `--convert-fstab-to-partuuid` – convert fstab/cmdline to destination PARTUUID.
@@ -118,7 +192,7 @@ Rsync filters:
 Other:
 - `--dest-root` – where to mount the destination during clone (default `/mnt/clone`).
 
-### Plan/apply flow (what happens)
+### Plan/apply flow (what happens under the hood)
 
 1) Plan:
    - Detect boot disk and partitions.
@@ -156,13 +230,19 @@ Other:
   klon --noop-runner --auto-approve sda
   ```
 
+### Release artifacts
+
+- GitHub Releases include `klon_<version>_linux_amd64.tar.gz`, `klon_<version>_linux_arm64.tar.gz` and matching `.deb` packages.
+- Tarballs contain a single `klon` binary you can drop into `/usr/local/bin`.
+
 ### Limitations and notes
 
-- Filesystems: supports cloning ext*, vfat, swap; other FS types are not initialized automatically.
-- Partition tables: supports MBR/DOS today; GPT is not yet fully modeled in the planner.
+- Filesystems: supports cloning ext*, vfat, swap; other FS types are not initialized automatically (you can still sync them if already present).
+- Partition tables: MBR/DOS by default; GPT is not yet fully modeled in the planner.
 - Boot layouts: SD boot with root on USB is handled for fstab/cmdline edits; complex custom layouts may need manual tweaks.
 - `--delete-root` is dangerous: only use when you want the destination `/` to exactly mirror the source.
-- Running on live systems: rsync may report code 23/24 for volatile paths (/proc, /sys); Klon warns and continues.
+- Running on live systems: rsync may report code 23/24 for volatile paths (/proc, /sys); Klon warns and continues. Review the summary and the state log.
+- SD → USB clones: use `-l`/`--leave-sd-usb-boot` if you already boot from SD with root on USB so Klon keeps that cmdline layout.
 
 ## Development
 
