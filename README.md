@@ -4,6 +4,8 @@
 
 A tool to clone Raspberry Pi disks, written in Go. Inspired by the fantastic [rpi-clone](https://github.com/billw2/rpi-clone) scripts.
 
+![Dolly, the mascot of Klon project](assets/dolly.png)
+
 ## Quick install on Raspberry Pi / Debian
 
 Before you start (Debian/Raspberry Pi OS):
