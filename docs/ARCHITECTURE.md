@@ -207,6 +207,30 @@ Execution:
     - `klon-setup` can run inside chroot (default) or outside with `--setup-no-chroot`
       (the script can read `KLON_DEST_ROOT` to locate the cloned system).
 
+Plan/apply recap:
+
+- Plan:
+  - Discover boot disk/partitions (supports SD boot + root on USB).
+  - Build `PlanResult` with per-partition actions (sync or initialize+sync).
+  - Write `PLAN` entry to `kln.state`; show plan and steps (verbose).
+  - Run prerequisite + safety checks unless noop.
+
+- Apply:
+  - Partition strategy `clone-table` (sfdisk copy) or `new-layout` (DOS, FAT32 boot sized by `-p1-size`, ext root).
+  - Immediate resize of p1 when `-p1-size` is set.
+  - Initialize partitions via mkfs/mkswap.
+  - Sync via rsync with excludes and optional delete flags; parallel subtrees for `/`.
+  - Optional grow last partition (`--expand-root`).
+  - Adjust fstab/cmdline (edit or PARTUUID), labels, hostname, cleanup net rules, optional grub, optional setup script (chroot or not).
+  - Verify clone (fsck -n best-effort, chroot /bin/true), then write `APPLY_SUCCESS`/`APPLY_FAILED` to `kln.state`.
+
+Limitations / notes:
+- FS init supported for ext*, vfat, swap; other FS types not auto-created.
+- Partition tables: DOS/MBR workflows covered; GPT not fully modeled.
+- Live rsync on `/` may emit code 23/24 for /proc,/sys etc.; logged as warnings.
+- `--delete-root` is destructive; default is to avoid delete on `/`.
+- Complex boot setups may need manual review (e.g., custom bootloader, multi-disk GPT).
+
 ## Test-Driven Development (TDD)
 
 The project is being developed with tests first wherever possible.

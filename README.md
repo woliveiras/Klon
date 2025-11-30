@@ -117,6 +117,52 @@ Rsync filters:
 Other:
 - `--dest-root` – where to mount the destination during clone (default `/mnt/clone`).
 
+### Plan/apply flow (what happens)
+
+1) Plan:
+   - Detect boot disk and partitions.
+   - Build a plan for each partition (sync or initialize+sync).
+   - Show the plan (and steps if `-v`), write `PLAN` to `kln.state`.
+   - Safety checks (unless `--noop-runner`).
+2) Apply (after confirmation or `--auto-approve`):
+   - Prepare destination table (`-f`/`-f2` or `new-layout`), apply `-p1-size` immediately.
+   - Initialize filesystems (mkfs/mkswap) for initialize+sync partitions.
+   - Sync files with rsync (parallel for `/usr`, `/var`, `/home`, `/opt` when syncing `/`).
+   - Optional grow last partition (`--expand-root`).
+   - Post-clone adjustments: fstab/cmdline (edit or PARTUUID), labels, hostname, `klon-setup`, optional grub (`--grub-auto`), cleanup net rules.
+   - Write `APPLY_SUCCESS` or `APPLY_FAILED` to `kln.state`.
+
+### Examples
+
+- Simple plan only (interactive):
+  ```bash
+  sudo klon
+  ```
+- Clone with initialize and show plan/steps, then apply:
+  ```bash
+  sudo klon -f --dest-root /mnt/clone sda
+  ```
+- Force two-partition initialize and custom /boot size:
+  ```bash
+  sudo klon -f2 -p1-size 512M sda
+  ```
+- Convert fstab/cmdline to PARTUUID and keep existing SD→USB cmdline:
+  ```bash
+  sudo klon -f --convert-fstab-to-partuuid -l sda
+  ```
+- CI/plan validation only (noop):
+  ```bash
+  klon --noop-runner --auto-approve sda
+  ```
+
+### Limitations and notes
+
+- Filesystems: supports cloning ext*, vfat, swap; other FS types are not initialized automatically.
+- Partition tables: supports MBR/DOS today; GPT is not yet fully modeled in the planner.
+- Boot layouts: SD boot with root on USB is handled for fstab/cmdline edits; complex custom layouts may need manual tweaks.
+- `--delete-root` is dangerous: only use when you want the destination `/` to exactly mirror the source.
+- Running on live systems: rsync may report code 23/24 for volatile paths (/proc, /sys); Klon warns and continues.
+
 ## Development
 
 ### Requirements
