@@ -20,15 +20,17 @@ type CommandRunner struct {
 	ExcludePatterns   []string
 	ExcludeFromFiles  []string
 	DestDisk          string
+	DeleteDest        bool
 }
 
-func NewCommandRunner(destRoot, strategy string, excludePatterns, excludeFromFiles []string, destDisk string) *CommandRunner {
+func NewCommandRunner(destRoot, strategy string, excludePatterns, excludeFromFiles []string, destDisk string, deleteDest bool) *CommandRunner {
 	return &CommandRunner{
 		DestRoot:          destRoot,
 		PartitionStrategy: strategy,
 		ExcludePatterns:   excludePatterns,
 		ExcludeFromFiles:  excludeFromFiles,
 		DestDisk:          ensureDevPrefix(destDisk),
+		DeleteDest:        deleteDest,
 	}
 }
 
@@ -129,7 +131,7 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 			return err
 		}
 	} else {
-		cmdStr, err := BuildSyncCommand(step, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles)
+		cmdStr, err := BuildSyncCommand(step, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles, r.DeleteDest)
 		if err != nil {
 			return fmt.Errorf("sync-filesystem on %s: cannot build rsync command: %w", step.DestinationDisk, err)
 		}
@@ -174,7 +176,7 @@ func (r *CommandRunner) runParallelRootSync(destRoot string) error {
 	}
 
 	// Build the base rsync command for root, then adapt it per subtree.
-	baseCmd, err := BuildSyncCommand(baseStep, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles)
+	baseCmd, err := BuildSyncCommand(baseStep, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles, r.DeleteDest)
 	if err != nil {
 		return fmt.Errorf("parallel root sync: cannot build base rsync command: %w", err)
 	}

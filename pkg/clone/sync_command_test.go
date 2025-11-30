@@ -11,12 +11,12 @@ func TestBuildSyncCommand_UsesMountpoints(t *testing.T) {
 		Mountpoint: "/boot",
 	}
 
-	cmd, err := BuildSyncCommand(step, "/mnt/clone", nil, nil)
+	cmd, err := BuildSyncCommand(step, "/mnt/clone", nil, nil, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !strings.HasPrefix(cmd, "rsync -aAXH --numeric-ids --whole-file") {
+	if !strings.HasPrefix(cmd, "rsync -aAXH --numeric-ids --whole-file --delete") {
 		t.Fatalf("expected rsync to include numeric-ids and whole-file, got: %q", cmd)
 	}
 	if !strings.HasSuffix(cmd, "/boot/ /mnt/clone/boot/") {
@@ -29,13 +29,13 @@ func TestBuildSyncCommand_RootMountpoint(t *testing.T) {
 		Operation:  "sync-filesystem",
 		Mountpoint: "/",
 	}
-	cmd, err := BuildSyncCommand(step, "/mnt/clone", nil, nil)
+	cmd, err := BuildSyncCommand(step, "/mnt/clone", nil, nil, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !strings.HasPrefix(cmd, "rsync -aAXH --numeric-ids --whole-file --one-file-system") {
-		t.Fatalf("expected rsync command for root to include tuned options and --one-file-system, got: %q", cmd)
+	if !strings.HasPrefix(cmd, "rsync -aAXH --numeric-ids --whole-file --delete --one-file-system") {
+		t.Fatalf("expected rsync command for root to include tuned options, --delete, and --one-file-system, got: %q", cmd)
 	}
 	if !strings.Contains(cmd, "--exclude /proc/**") ||
 		!strings.Contains(cmd, "--exclude /sys/**") ||

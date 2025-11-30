@@ -202,7 +202,7 @@ func run(args []string, ui UI) error {
 		}
 	}
 
-	runner := clone.NewCommandRunner(opts.DestRoot, opts.PartitionStrategy, planOpts.ExcludePatterns, planOpts.ExcludeFromFiles, opts.Destination)
+	runner := clone.NewCommandRunner(opts.DestRoot, opts.PartitionStrategy, planOpts.ExcludePatterns, planOpts.ExcludeFromFiles, opts.Destination, opts.DeleteDest)
 	if err := clone.Apply(plan, planOpts, runner); err != nil {
 		_ = clone.AppendStateLog("kln.state", plan, planOpts, steps, "APPLY_FAILED", err)
 		return err
