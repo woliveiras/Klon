@@ -80,9 +80,10 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           # Extract the changelog section for the tag into a file.
-          # Assumes CHANGELOG.md uses headings like "## v1.2.3 - YYYY-MM-DD".
+          # Assumes CHANGELOG.md uses headings like "## v1.2.3 - YYYY-MM-DD" (suffix optional).
+          # Match the heading line even if it has a trailing date or text.
           awk -v tag="## ${TAG}" '
-            $0 == tag { capture = 1; next }
+            index($0, tag) == 1 { capture = 1; next }
             /^## v[0-9]/ && capture { exit }
             capture { print }
           ' CHANGELOG.md > release_body_content.md || true
