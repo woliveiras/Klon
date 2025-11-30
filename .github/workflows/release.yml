@@ -1,38 +1,90 @@
-name: Release
+name: Create Release from Tag
 
 on:
   push:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
-  build-and-upload:
+  create_release:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        goos: [linux]
-        goarch: [amd64, arm64, arm]
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: '1.25.4'
-
-      - name: Build Klon binary
+      - name: Extract changelog entry for tag
         env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+          TAG: ${{ github.ref_name }}
         run: |
-          go build -o klon .
+          # Extract the changelog section for the tag into a file.
+          # It assumes CHANGELOG.md uses headings like "## v1.2.3 - YYYY-MM-DD".
+          awk -v tag="## ${TAG}" '
+            $0 == tag { capture = 1; next }
+            /^## v[0-9]/ && capture { exit }
+            capture { print }
+          ' CHANGELOG.md > release_body_content.md || true
 
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: klon-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: klon
+          # If nothing was captured, produce a minimal body.
+          if [ ! -s release_body_content.md ]; then
+            echo "No changelog entry found for ${TAG}" > release_body_content.md
+          fi
 
+          # Prefix with a header with the tag and date (if available)
+          {
+            echo "${TAG}";
+            echo "";
+            name: Create Release from Tag
+
+            on:
+              push:
+                tags:
+                  - 'v*'
+
+            permissions:
+              contents: write
+
+            jobs:
+              create_release:
+                runs-on: ubuntu-latest
+                steps:
+                  - name: Checkout repository
+                    uses: actions/checkout@v4
+
+                  - name: Extract changelog entry for tag
+                    env:
+                      TAG: ${{ github.ref_name }}
+                    run: |
+                      # Extract the changelog section for the tag into a file.
+                      # It assumes CHANGELOG.md uses headings like "## v1.2.3 - YYYY-MM-DD".
+                      awk -v tag="## ${TAG}" '
+                        $0 == tag { capture = 1; next }
+                        /^## v[0-9]/ && capture { exit }
+                        capture { print }
+                      ' CHANGELOG.md > release_body_content.md || true
+
+                      # If nothing was captured, produce a minimal body.
+                      if [ ! -s release_body_content.md ]; then
+                        echo "No changelog entry found for ${TAG}" > release_body_content.md
+                      fi
+
+                      # Prefix with a header with the tag
+                      {
+                        echo "${TAG}";
+                        echo "";
+                        cat release_body_content.md;
+                      } > release_body.md
+
+                  - name: Create GitHub release
+                    uses: peter-evans/create-release@v4
+                    with:
+                      tag_name: ${{ github.ref_name }}
+                      release_name: ${{ github.ref_name }}
+                      body_path: release_body.md
+                      draft: false
+                      prerelease: false
+            cat release_body_content.md;
+
+          } > release_body.md
