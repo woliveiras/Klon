@@ -8,6 +8,8 @@ on:
 
 jobs:
   build-and-test:
+    # Skip this workflow when the event is a GitHub Release (handled by release.yml).
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
 
     steps:

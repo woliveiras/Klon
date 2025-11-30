@@ -8,6 +8,8 @@ on:
 
 jobs:
   build-and-upload:
+    # Do not run this workflow on GitHub Release events (release.yml covers those).
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
 
     strategy:
