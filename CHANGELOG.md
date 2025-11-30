@@ -1,3 +1,8 @@
+## v1.1.2 - 2025-11-30
+
+- chore: add make (a04fe17)
+- chore: update CHANGELOG.md (d435300)
+
 # Changelog
 
 ## v1.0.0 - 2025-11-30
@@ -20,4 +25,3 @@
 - feat: add log flag (fb99533)
 - feat: add --auto-aprove flag (38df460)
 - feat: add kln.state plan (c465b4f)
-
