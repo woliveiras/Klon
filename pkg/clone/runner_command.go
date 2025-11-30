@@ -110,8 +110,9 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 		return fmt.Errorf("sync-filesystem on %s: dest root is empty", step.DestinationDisk)
 	}
 	if step.Mountpoint == "" {
-		log.Printf("klon: skipping sync-filesystem for %s because the source mountpoint is empty", step.SourceDevice)
-		return nil
+		if step.SourceDevice == "" {
+			return fmt.Errorf("sync-filesystem on %s: source mountpoint empty and no source device to mount", step.DestinationDisk)
+		}
 	}
 
 	destPath := r.DestRoot
@@ -140,12 +141,37 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 	// progress (especially for large clones).
 	_ = runShellCommand(fmt.Sprintf("df -h %s", destPath))
 
+	// If source is not mounted, mount it temporarily to sync.
+	srcMount := step.Mountpoint
+	tempSrc := ""
+	if step.Mountpoint == "" && step.SourceDevice != "" {
+		tmpDir, err := os.MkdirTemp("", "klon-src-*")
+		if err != nil {
+			return fmt.Errorf("sync-filesystem on %s: cannot create temp dir to mount source: %w", step.DestinationDisk, err)
+		}
+		tempSrc = tmpDir
+		mntCmd := fmt.Sprintf("mount -o ro %s %s", ensureDevPrefix(step.SourceDevice), tempSrc)
+		if err := runShellCommand(mntCmd); err != nil {
+			os.RemoveAll(tempSrc)
+			return fmt.Errorf("sync-filesystem on %s: failed to mount source %s on %s: %w", step.DestinationDisk, step.SourceDevice, tempSrc, err)
+		}
+		defer func() {
+			_ = runShellCommand(fmt.Sprintf("umount %s", tempSrc))
+			_ = os.RemoveAll(tempSrc)
+		}()
+		srcMount = tempSrc
+	}
+
 	if step.Mountpoint == "/" {
 		if err := r.runParallelRootSync(destPath); err != nil {
 			return err
 		}
 	} else {
-		cmdStr, err := BuildSyncCommand(step, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles, r.DeleteDest)
+		effectiveStep := step
+		if tempSrc != "" {
+			effectiveStep.Mountpoint = srcMount
+		}
+		cmdStr, err := BuildSyncCommand(effectiveStep, r.DestRoot, r.ExcludePatterns, r.ExcludeFromFiles, r.DeleteDest)
 		if err != nil {
 			return fmt.Errorf("sync-filesystem on %s: cannot build rsync command: %w", step.DestinationDisk, err)
 		}

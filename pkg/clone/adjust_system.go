@@ -64,12 +64,25 @@ func AdjustSystem(plan PlanResult, opts PlanOptions, destRoot string) error {
 	if err := adjustFstab(plan, opts, destRoot); err != nil {
 		return err
 	}
-	if err := adjustCmdline(plan, opts, destRoot); err != nil {
-		return err
+	if !opts.LeaveSDUSB {
+		if err := adjustCmdline(plan, opts, destRoot); err != nil {
+			return err
+		}
 	}
 	if opts.Hostname != "" {
 		if err := adjustHostname(opts.Hostname, destRoot); err != nil {
 			return err
+		}
+	}
+	if opts.LabelPartitions != "" {
+		if err := applyLabels(plan, opts, destRoot); err != nil {
+			return err
+		}
+	}
+	if len(opts.SetupArgs) > 0 {
+		cmd := fmt.Sprintf("chroot %s klon-setup %s", destRoot, strings.Join(opts.SetupArgs, " "))
+		if err := runShellCommand(cmd); err != nil {
+			return fmt.Errorf("AdjustSystem: klon-setup failed inside chroot: %w", err)
 		}
 	}
 
@@ -105,11 +118,25 @@ func adjustFstab(plan PlanResult, opts PlanOptions, destRoot string) error {
 		}
 	}
 
-	for src, dst := range srcToDstDev {
-		content = strings.ReplaceAll(content, src, dst)
-	}
-	for srcPU, dstPU := range srcPUToDstPU {
-		content = strings.ReplaceAll(content, "PARTUUID="+srcPU, "PARTUUID="+dstPU)
+	if opts.ConvertToPartuuid {
+		for srcPU, dstPU := range srcPUToDstPU {
+			content = strings.ReplaceAll(content, "PARTUUID="+srcPU, "PARTUUID="+dstPU)
+		}
+	} else if opts.EditFstabName != "" {
+		for src, dst := range srcToDstDev {
+			newDev := destDeviceWithPrefix(opts.EditFstabName, partitionIndexFromDevice(dst))
+			content = strings.ReplaceAll(content, src, newDev)
+		}
+		for srcPU, dstPU := range srcPUToDstPU {
+			content = strings.ReplaceAll(content, "PARTUUID="+srcPU, "PARTUUID="+dstPU)
+		}
+	} else {
+		for src, dst := range srcToDstDev {
+			content = strings.ReplaceAll(content, src, dst)
+		}
+		for srcPU, dstPU := range srcPUToDstPU {
+			content = strings.ReplaceAll(content, "PARTUUID="+srcPU, "PARTUUID="+dstPU)
+		}
 	}
 
 	return os.WriteFile(path, []byte(content), 0o644)
@@ -140,15 +167,40 @@ func adjustCmdline(plan PlanResult, opts PlanOptions, destRoot string) error {
 	}
 	dstRootDev := partitionDevice(opts.Destination, rootIdx)
 
-	content = strings.ReplaceAll(content, srcRootDev, dstRootDev)
-
-	srcPU, _ := partUUID(srcRootDev)
-	dstPU, _ := partUUID(dstRootDev)
-	if srcPU != "" && dstPU != "" {
-		content = strings.ReplaceAll(content, "PARTUUID="+srcPU, "PARTUUID="+dstPU)
+	if opts.ConvertToPartuuid {
+		if dstPU, _ := partUUID(dstRootDev); dstPU != "" {
+			content = replaceRootParam(content, "root=", "PARTUUID="+dstPU)
+		}
+	} else {
+		content = strings.ReplaceAll(content, srcRootDev, dstRootDev)
+		srcPU, _ := partUUID(srcRootDev)
+		dstPU, _ := partUUID(dstRootDev)
+		if srcPU != "" && dstPU != "" {
+			content = strings.ReplaceAll(content, "PARTUUID="+srcPU, "PARTUUID="+dstPU)
+		}
 	}
 
 	return os.WriteFile(path, []byte(content), 0o644)
+}
+
+func replaceRootParam(content, prefix, value string) string {
+	fields := strings.Fields(content)
+	for i, f := range fields {
+		if strings.HasPrefix(f, prefix) {
+			fields[i] = prefix + value
+		}
+	}
+	return strings.Join(fields, " ")
+}
+
+func destDeviceWithPrefix(prefix string, idx int) string {
+	if idx <= 0 {
+		return "/dev/" + prefix
+	}
+	if strings.HasPrefix(prefix, "mmcblk") || strings.HasPrefix(prefix, "nvme") {
+		return fmt.Sprintf("/dev/%sp%d", prefix, idx)
+	}
+	return fmt.Sprintf("/dev/%s%d", prefix, idx)
 }
 
 func adjustHostname(newHost, destRoot string) error {
@@ -181,3 +233,32 @@ func adjustHostname(newHost, destRoot string) error {
 	return os.WriteFile(hostsPath, []byte(hostsContent), 0o644)
 }
 
+func applyLabels(plan PlanResult, opts PlanOptions, destRoot string) error {
+	label := opts.LabelPartitions
+	if label == "" {
+		return nil
+	}
+	suffixAll := strings.HasSuffix(label, "#")
+	base := label
+	if suffixAll {
+		base = strings.TrimSuffix(label, "#")
+	}
+	for _, p := range plan.Partitions {
+		// Only label ext* partitions (best-effort).
+		dstDev := partitionDevice(opts.Destination, p.Index)
+		// Determine label to apply.
+		lbl := ""
+		if suffixAll {
+			lbl = fmt.Sprintf("%s%d", base, p.Index)
+		} else if p.Mountpoint == "/" {
+			lbl = base
+		}
+		if lbl == "" {
+			continue
+		}
+		if err := runShellCommand(fmt.Sprintf("e2label %s %s", dstDev, lbl)); err != nil {
+			return fmt.Errorf("AdjustSystem: failed to label %s as %s: %w", dstDev, lbl, err)
+		}
+	}
+	return nil
+}
