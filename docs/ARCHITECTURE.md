@@ -197,8 +197,9 @@ Execution:
       - Unmounts the destination partition afterwards, logging any failure.
     - Logs all executed commands and their output using the standard `log`
       package, so runs are auditable.
-  - Other `Runner` implementations (e.g. pure logging or plan-only runners)
-    can be plugged in for testing or alternative front-ends.
+- Other `Runner` implementations (e.g. pure logging or plan-only runners)
+  can be plugged in for testing or alternative front-ends.
+  - A `NoopRunner` is available to log steps without executing commands (CI).
 
 ## Test-Driven Development (TDD)
 

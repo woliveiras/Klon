@@ -97,6 +97,7 @@ Safety/execution:
 - `-F` – force even if destination is smaller (may fail).
 - `--delete-dest` – use `rsync --delete` on non-root destinations (careful).
 - `--delete-root` – also apply `--delete` when syncing `/` (very destructive; off by default).
+- `--noop-runner` – do not run any system commands (useful for CI plan validation only).
 
 Post-clone/system:
 - `--hostname` – set hostname and `/etc/hosts` in the clone.

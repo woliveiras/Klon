@@ -25,8 +25,8 @@ jobs:
       - name: Build binary
         run: go build -o klon .
 
-      - name: Smoke test binary
-        run: ./klon -q --auto-approve sda || true
+      - name: Smoke test binary (noop)
+        run: ./klon --noop-runner --auto-approve --dest-root /tmp/klon-ci sda
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v5
