@@ -1,3 +1,10 @@
+## v2.2.0 - 2025-11-30
+
+- chore: update readme (5a0f127)
+- chore: update logo (dc1ed17)
+- chore: update readme (81ee62d)
+- chore: update readme (e8c700f)
+
 ## v2.1.0 - 2025-11-30
 
 - fix: changelog is not updated in release page (b74094b)
