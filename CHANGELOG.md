@@ -1,3 +1,7 @@
+## v1.1.6 - 2025-11-30
+
+- chore: split ci process (13cccfd)
+
 ## v1.1.5 - 2025-11-30
 
 - docs: add release guide (6a44753)
