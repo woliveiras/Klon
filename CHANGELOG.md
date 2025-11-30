@@ -1,3 +1,7 @@
+## v1.1.4 - 2025-11-30
+
+- fix: make push is not working (7aac0e6)
+
 ## v1.1.3 - 2025-11-30
 
 - chore: update make release (dd64c86)
