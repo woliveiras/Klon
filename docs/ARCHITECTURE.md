@@ -216,7 +216,7 @@ Plan/apply recap:
   - Run prerequisite + safety checks unless noop.
 
 - Apply:
-  - Partition strategy `clone-table` (sfdisk copy) or `new-layout` (DOS, FAT32 boot sized by `-p1-size`, ext root).
+  - Partition strategy `clone-table` (sfdisk copy), `new-layout` (DOS, FAT32 boot sized by `-p1-size`, ext root) or `new-layout-gpt` (GPT, FAT32 boot, ext root).
   - Immediate resize of p1 when `-p1-size` is set.
   - Initialize partitions via mkfs/mkswap.
   - Sync via rsync with excludes and optional delete flags; parallel subtrees for `/`.

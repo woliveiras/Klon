@@ -109,6 +109,7 @@ Post-clone/system:
 - `-s arg -s arg2` – run `klon-setup` in chroot on the clone with args.
 - `--setup-no-chroot` – run `klon-setup` without chroot (passes `KLON_DEST_ROOT`).
 - `--grub-auto` – run `grub-install` automatically if available.
+- `--gpt` – with `--initialize new-layout`, create a GPT with FAT32 boot + ext root.
 
 Rsync filters:
 - `--exclude`, `--exclude-from` – extra patterns.

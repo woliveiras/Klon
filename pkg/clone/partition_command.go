@@ -21,9 +21,7 @@ func BuildPartitionCommand(step ExecutionStep, strategy string) (string, error) 
 	case "", "clone-table":
 		return fmt.Sprintf("sfdisk -d %s | sfdisk %s", src, target), nil
 	case "new-layout":
-		// Minimal new layout: DOS label with a boot FAT32 (partition 1) and
-		// a root ext (partition 2). Partition 1 size defaults to 256M unless
-		// the caller provided step.SizeBytes.
+		// Minimal new layout (DOS): FAT32 boot + ext root.
 		sizeBytes := step.SizeBytes
 		if sizeBytes <= 0 {
 			sizeBytes = 256 * 1024 * 1024 // 256MiB default boot
@@ -31,6 +29,14 @@ func BuildPartitionCommand(step ExecutionStep, strategy string) (string, error) 
 		sizeMB := (sizeBytes + 1024*1024 - 1) / (1024 * 1024)
 		script := fmt.Sprintf(",%dM,c\n,,L\n", sizeMB)
 		return fmt.Sprintf("sfdisk %s <<'EOF'\nlabel: dos\n%sEOF", target, script), nil
+	case "new-layout-gpt":
+		// Simple GPT layout: FAT32 boot + ext root. Uses parted for clarity.
+		sizeBytes := step.SizeBytes
+		if sizeBytes <= 0 {
+			sizeBytes = 256 * 1024 * 1024 // 256MiB default boot
+		}
+		sizeMB := (sizeBytes + 1024*1024 - 1) / (1024 * 1024)
+		return fmt.Sprintf("parted -s %s mklabel gpt mkpart primary fat32 1MiB %dMiB set 1 boot on mkpart primary ext4 %dMiB 100%%", target, sizeMB, sizeMB+1), nil
 	default:
 		return "", fmt.Errorf("BuildPartitionCommand: unknown strategy %q", strategy)
 	}

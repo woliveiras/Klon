@@ -29,6 +29,7 @@ type Options struct {
 	ConvertToPartuuid    bool
 	LabelPartitions      string
 	MountDirs            []string
+	UseGPT               bool // --gpt (for new-layout)
 	Quiet                bool // -q
 	Unattended           bool // -u
 	UnattendedInit       bool // -U
@@ -137,6 +138,10 @@ func run(args []string, ui UI) error {
 		opts = wizardOpts
 	} else {
 		opts.Destination = rest[0]
+	}
+
+	if opts.UseGPT && (opts.PartitionStrategy == "" || opts.PartitionStrategy == "new-layout") {
+		opts.PartitionStrategy = "new-layout-gpt"
 	}
 
 	if !opts.NoopRunner {
@@ -309,6 +314,7 @@ fs.BoolVar(&opts.NoopRunner, "noop-runner", false, "do not run any system comman
 	fs.StringVar(&excludeList, "exclude", "", "comma-separated patterns to exclude from rsync")
 	fs.StringVar(&excludeFromList, "exclude-from", "", "comma-separated files with rsync exclude patterns")
 	fs.StringVar(&mountList, "mountdir", "", "comma-separated list of mountpoints to sync instead of all")
+	fs.BoolVar(&opts.UseGPT, "gpt", false, "when using new-layout, create a GPT with FAT32 boot and ext root")
 	fs.StringVar(&opts.Hostname, "hostname", "", "set hostname on cloned system")
 	fs.StringVar(&opts.LogFile, "log-file", "", "append logs to this file instead of stderr")
 	fs.StringVar(&opts.EditFstabName, "edit-fstab", "", "edit destination fstab to change device names to this disk prefix (e.g. sda)")
