@@ -1,6 +1,7 @@
 package clone
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -40,12 +41,13 @@ func VerifyClone(plan PlanResult, opts PlanOptions, destRoot string) error {
 		return fmt.Errorf("VerifyClone: cannot create destRoot %s: %w", destRoot, err)
 	}
 
+	ctx := context.Background()
 	dstDisk := opts.Destination
 	rootPart := partitionDevice(dstDisk, rootIdx)
-	if err := runShellCommand(fmt.Sprintf("mount %s %s", rootPart, destRoot)); err != nil {
+	if err := runShellCommand(ctx, fmt.Sprintf("mount %s %s", rootPart, destRoot)); err != nil {
 		return fmt.Errorf("VerifyClone: failed to mount root %s on %s: %w", rootPart, destRoot, err)
 	}
-	defer runShellCommand(fmt.Sprintf("umount %s", destRoot))
+	defer runShellCommand(ctx, fmt.Sprintf("umount %s", destRoot))
 
 	var bootDir string
 	var bootPart string
@@ -58,10 +60,10 @@ func VerifyClone(plan PlanResult, opts PlanOptions, destRoot string) error {
 			return fmt.Errorf("VerifyClone: cannot create boot dir %s: %w", bootDir, err)
 		}
 		bootPart = partitionDevice(dstDisk, bootIdx)
-		if err := runShellCommand(fmt.Sprintf("mount %s %s", bootPart, bootDir)); err != nil {
+		if err := runShellCommand(ctx, fmt.Sprintf("mount %s %s", bootPart, bootDir)); err != nil {
 			return fmt.Errorf("VerifyClone: failed to mount boot %s on %s: %w", bootPart, bootDir, err)
 		}
-		defer runShellCommand(fmt.Sprintf("umount %s", bootDir))
+		defer runShellCommand(ctx, fmt.Sprintf("umount %s", bootDir))
 	}
 
 	// Basic filesystem structure checks.
@@ -116,13 +118,13 @@ func VerifyClone(plan PlanResult, opts PlanOptions, destRoot string) error {
 	// Optional: fsck -n on root and boot partitions (best-effort). We log
 	// results but do not fail verification on non-zero exit codes, since
 	// minor issues or "dirty" flags are common after a live clone.
-	_ = runShellCommand(fmt.Sprintf("fsck -n %s", rootPart))
+	_ = runShellCommand(ctx, fmt.Sprintf("fsck -n %s", rootPart))
 	if bootPart != "" {
-		_ = runShellCommand(fmt.Sprintf("fsck -n %s", bootPart))
+		_ = runShellCommand(ctx, fmt.Sprintf("fsck -n %s", bootPart))
 	}
 
 	// Optional: minimal chroot sanity check.
-	if err := runShellCommand(fmt.Sprintf("chroot %s /bin/true", destRoot)); err != nil {
+	if err := runShellCommand(ctx, fmt.Sprintf("chroot %s /bin/true", destRoot)); err != nil {
 		return fmt.Errorf("VerifyClone: chroot sanity check failed: %w", err)
 	}
 

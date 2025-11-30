@@ -1,6 +1,7 @@
 package clone
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,6 +21,7 @@ func AdjustSystem(plan PlanResult, opts PlanOptions, destRoot string) error {
 	}
 
 	useChroot := !opts.SetupNoChroot
+	ctx := context.Background()
 
 	rootIdx := -1
 	bootIdx := -1
@@ -46,10 +48,10 @@ func AdjustSystem(plan PlanResult, opts PlanOptions, destRoot string) error {
 	}
 
 	rootPart := partitionDevice(dstDisk, rootIdx)
-	if err := runShellCommand(fmt.Sprintf("mount %s %s", rootPart, destRoot)); err != nil {
+	if err := runShellCommand(ctx, fmt.Sprintf("mount %s %s", rootPart, destRoot)); err != nil {
 		return fmt.Errorf("AdjustSystem: failed to mount root %s on %s: %w", rootPart, destRoot, err)
 	}
-	defer runShellCommand(fmt.Sprintf("umount %s", destRoot))
+	defer runShellCommand(ctx, fmt.Sprintf("umount %s", destRoot))
 
 	if bootIdx != -1 {
 		bootDir := filepath.Join(destRoot, "boot")
@@ -57,10 +59,10 @@ func AdjustSystem(plan PlanResult, opts PlanOptions, destRoot string) error {
 			return fmt.Errorf("AdjustSystem: cannot create boot dir %s: %w", bootDir, err)
 		}
 		bootPart := partitionDevice(dstDisk, bootIdx)
-		if err := runShellCommand(fmt.Sprintf("mount %s %s", bootPart, bootDir)); err != nil {
+		if err := runShellCommand(ctx, fmt.Sprintf("mount %s %s", bootPart, bootDir)); err != nil {
 			return fmt.Errorf("AdjustSystem: failed to mount boot %s on %s: %w", bootPart, bootDir, err)
 		}
-		defer runShellCommand(fmt.Sprintf("umount %s", bootDir))
+		defer runShellCommand(ctx, fmt.Sprintf("umount %s", bootDir))
 	}
 
 	if err := adjustFstab(plan, opts, destRoot); err != nil {
@@ -77,21 +79,21 @@ func AdjustSystem(plan PlanResult, opts PlanOptions, destRoot string) error {
 		}
 	}
 	if opts.LabelPartitions != "" {
-		if err := applyLabels(plan, opts, destRoot); err != nil {
+		if err := applyLabels(ctx, plan, opts, destRoot); err != nil {
 			return err
 		}
 	}
 	if opts.GrubAuto {
 		// Best effort: run grub-install pointing at the destination disk using
 		// the mounted clone as root-dir.
-		if err := runShellCommand(fmt.Sprintf("grub-install --root-directory=%s %s", destRoot, ensureDevPrefix(opts.Destination))); err != nil {
+		if err := runShellCommand(ctx, fmt.Sprintf("grub-install --root-directory=%s %s", destRoot, ensureDevPrefix(opts.Destination))); err != nil {
 			return fmt.Errorf("AdjustSystem: grub-install failed: %w", err)
 		}
 	}
 	if len(opts.SetupArgs) > 0 {
 		if useChroot {
 			cmd := fmt.Sprintf("chroot %s klon-setup %s", destRoot, strings.Join(opts.SetupArgs, " "))
-			if err := runShellCommand(cmd); err != nil {
+			if err := runShellCommand(ctx, cmd); err != nil {
 				return fmt.Errorf("AdjustSystem: klon-setup failed inside chroot: %w", err)
 			}
 		} else {
@@ -99,7 +101,7 @@ func AdjustSystem(plan PlanResult, opts PlanOptions, destRoot string) error {
 			// via an env var so it can operate without chrooting.
 			envPrefix := fmt.Sprintf("KLON_DEST_ROOT=%s", destRoot)
 			cmd := fmt.Sprintf("%s klon-setup %s", envPrefix, strings.Join(opts.SetupArgs, " "))
-			if err := runShellCommand(cmd); err != nil {
+			if err := runShellCommand(ctx, cmd); err != nil {
 				return fmt.Errorf("AdjustSystem: klon-setup failed (non-chroot): %w", err)
 			}
 		}
@@ -252,7 +254,7 @@ func adjustHostname(newHost, destRoot string) error {
 	return os.WriteFile(hostsPath, []byte(hostsContent), 0o644)
 }
 
-func applyLabels(plan PlanResult, opts PlanOptions, destRoot string) error {
+func applyLabels(ctx context.Context, plan PlanResult, opts PlanOptions, destRoot string) error {
 	label := opts.LabelPartitions
 	if label == "" {
 		return nil
@@ -275,7 +277,7 @@ func applyLabels(plan PlanResult, opts PlanOptions, destRoot string) error {
 		if lbl == "" {
 			continue
 		}
-		if err := runShellCommand(fmt.Sprintf("e2label %s %s", dstDev, lbl)); err != nil {
+		if err := runShellCommand(ctx, fmt.Sprintf("e2label %s %s", dstDev, lbl)); err != nil {
 			return fmt.Errorf("AdjustSystem: failed to label %s as %s: %w", dstDev, lbl, err)
 		}
 	}
