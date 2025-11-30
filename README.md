@@ -107,6 +107,8 @@ Post-clone/system:
 - `-l` – keep current cmdline when SD→USB boot is already configured.
 - `-L label[#]` – label ext partitions; suffix `#` numbers all.
 - `-s arg -s arg2` – run `klon-setup` in chroot on the clone with args.
+- `--setup-no-chroot` – run `klon-setup` without chroot (passes `KLON_DEST_ROOT`).
+- `--grub-auto` – run `grub-install` automatically if available.
 
 Rsync filters:
 - `--exclude`, `--exclude-from` – extra patterns.

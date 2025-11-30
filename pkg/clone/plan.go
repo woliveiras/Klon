@@ -35,6 +35,8 @@ type PlanOptions struct {
 	ExcludeFromFiles  []string
 	Hostname          string
 	DeleteRoot        bool
+	SetupNoChroot     bool
+	GrubAuto          bool
 }
 
 // System abstracts how we discover information about disks and partitions

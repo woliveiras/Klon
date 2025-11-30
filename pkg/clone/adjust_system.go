@@ -19,6 +19,8 @@ func AdjustSystem(plan PlanResult, opts PlanOptions, destRoot string) error {
 		return fmt.Errorf("AdjustSystem: destRoot is empty")
 	}
 
+	useChroot := !opts.SetupNoChroot
+
 	rootIdx := -1
 	bootIdx := -1
 	for _, p := range plan.Partitions {
@@ -79,10 +81,27 @@ func AdjustSystem(plan PlanResult, opts PlanOptions, destRoot string) error {
 			return err
 		}
 	}
+	if opts.GrubAuto {
+		// Best effort: run grub-install pointing at the destination disk using
+		// the mounted clone as root-dir.
+		if err := runShellCommand(fmt.Sprintf("grub-install --root-directory=%s %s", destRoot, ensureDevPrefix(opts.Destination))); err != nil {
+			return fmt.Errorf("AdjustSystem: grub-install failed: %w", err)
+		}
+	}
 	if len(opts.SetupArgs) > 0 {
-		cmd := fmt.Sprintf("chroot %s klon-setup %s", destRoot, strings.Join(opts.SetupArgs, " "))
-		if err := runShellCommand(cmd); err != nil {
-			return fmt.Errorf("AdjustSystem: klon-setup failed inside chroot: %w", err)
+		if useChroot {
+			cmd := fmt.Sprintf("chroot %s klon-setup %s", destRoot, strings.Join(opts.SetupArgs, " "))
+			if err := runShellCommand(cmd); err != nil {
+				return fmt.Errorf("AdjustSystem: klon-setup failed inside chroot: %w", err)
+			}
+		} else {
+			// Run the setup script directly, pointing it at the mounted destRoot
+			// via an env var so it can operate without chrooting.
+			envPrefix := fmt.Sprintf("KLON_DEST_ROOT=%s", destRoot)
+			cmd := fmt.Sprintf("%s klon-setup %s", envPrefix, strings.Join(opts.SetupArgs, " "))
+			if err := runShellCommand(cmd); err != nil {
+				return fmt.Errorf("AdjustSystem: klon-setup failed (non-chroot): %w", err)
+			}
 		}
 	}
 

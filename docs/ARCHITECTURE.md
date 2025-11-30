@@ -202,6 +202,10 @@ Execution:
   - A `NoopRunner` is available to log steps without executing commands (CI).
   - CI workflow uses the noop runner with `--noop-runner` to avoid touching
     disks while still validating plans and coverage.
+  - Post-clone extras:
+    - Optional `grub-install` when `--grub-auto` is set.
+    - `klon-setup` can run inside chroot (default) or outside with `--setup-no-chroot`
+      (the script can read `KLON_DEST_ROOT` to locate the cloned system).
 
 ## Test-Driven Development (TDD)
 

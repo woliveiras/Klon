@@ -35,6 +35,8 @@ type Options struct {
 	AutoApprove          bool // --auto-approve
 	DeleteDest           bool // --delete-dest (non-root)
 	DeleteRoot           bool // --delete-root (apply delete on /)
+	SetupNoChroot        bool // --setup-no-chroot
+	GrubAuto             bool // --grub-auto
 	Verbose              bool // -v
 	PartitionStrategy    string
 	ExcludePatterns      []string
@@ -161,6 +163,8 @@ func run(args []string, ui UI) error {
 		LabelPartitions:     opts.LabelPartitions,
 		MountDirs:           opts.MountDirs,
 		DeleteRoot:          opts.DeleteRoot,
+		SetupNoChroot:       opts.SetupNoChroot,
+		GrubAuto:            opts.GrubAuto,
 		Quiet:               opts.Quiet,
 		Unattended:          opts.Unattended,
 		UnattendedInit:      opts.UnattendedInit,
@@ -291,8 +295,10 @@ func parseFlags(args []string) (Options, []string, error) {
 	fs.BoolVar(&opts.Unattended, "u", false, "unattended clone if not initializing")
 	fs.BoolVar(&opts.UnattendedInit, "U", false, "unattended even if initializing")
 fs.BoolVar(&opts.AutoApprove, "auto-approve", false, "do not ask for confirmation before applying the plan")
-fs.BoolVar(&opts.DeleteDest, "delete-dest", false, "delete files on destination that do not exist on source (non-root)")
-fs.BoolVar(&opts.DeleteRoot, "delete-root", false, "apply --delete on the root filesystem sync as well (dangerous)")
+	fs.BoolVar(&opts.DeleteDest, "delete-dest", false, "delete files on destination that do not exist on source (non-root)")
+	fs.BoolVar(&opts.DeleteRoot, "delete-root", false, "apply --delete on the root filesystem sync as well (dangerous)")
+	fs.BoolVar(&opts.SetupNoChroot, "setup-no-chroot", false, "run klon-setup without chroot (passes KLON_DEST_ROOT)")
+	fs.BoolVar(&opts.GrubAuto, "grub-auto", false, "run grub-install automatically if grub is detected")
 fs.BoolVar(&opts.NoopRunner, "noop-runner", false, "do not run any system commands; useful for CI to validate plans only")
 	fs.BoolVar(&opts.AllSync, "a", false, "sync all partitions if types are compatible, not just mounted ones")
 	fs.BoolVar(&opts.LeaveSDUSB, "l", false, "leave SD to USB boot setup intact when cloning to SD from USB or vice-versa")
