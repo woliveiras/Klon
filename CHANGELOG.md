@@ -1,3 +1,7 @@
+## v1.2.1 - 2025-11-30
+
+- No changes recorded.
+
 ## v1.2.0 - 2025-11-30
 
 - test(cli): fix example test imports and deterministic failure (bd85266)
