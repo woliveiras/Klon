@@ -1,3 +1,7 @@
+## v1.1.7 - 2025-11-30
+
+- ci: use ncipollo/release-action for creating releases (562fc3d)
+
 ## v1.1.6 - 2025-11-30
 
 - chore: split ci process (13cccfd)
