@@ -52,6 +52,8 @@ func (r *CommandRunner) Run(step ExecutionStep) error {
 		return r.runInitializePartition(step)
 	case "sync-filesystem":
 		return r.runSyncFilesystem(step)
+	case "resize-p1":
+		return r.runResizeP1(step)
 	default:
 		log.Printf("klon: ignoring unknown operation %q for step: %s", step.Operation, step.Description)
 		return nil
@@ -88,6 +90,18 @@ func (r *CommandRunner) runGrowPartition(step ExecutionStep) error {
 		return fmt.Errorf("grow-partition on %s: resize2fs failed for %s: %w", step.DestinationDisk, part, err)
 	}
 
+	return nil
+}
+
+func (r *CommandRunner) runResizeP1(step ExecutionStep) error {
+	if step.SizeBytes <= 0 {
+		return fmt.Errorf("resize-p1 on %s: missing target size", step.DestinationDisk)
+	}
+	disk := ensureDevPrefix(step.DestinationDisk)
+	cmdStr := fmt.Sprintf("parted -s %s resizepart 1 %dB", disk, step.SizeBytes)
+	if err := runShellCommand(cmdStr); err != nil {
+		return fmt.Errorf("resize-p1 on %s: parted failed: %w", step.DestinationDisk, err)
+	}
 	return nil
 }
 

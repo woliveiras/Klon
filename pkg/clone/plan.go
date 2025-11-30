@@ -91,6 +91,15 @@ func PlanWithSystem(sys System, opts PlanOptions) (PlanResult, error) {
 	if err != nil {
 		return PlanResult{}, fmt.Errorf("failed to detect mounted partitions: %w", err)
 	}
+	if opts.AllSync {
+		if ls, ok := sys.(interface {
+			AllParts(string) []MountedPartition
+		}); ok {
+			parts = append(parts, ls.AllParts(srcDisk)...)
+		} else {
+			parts = append(parts, allPartitionsIncludingUnmounted(srcDisk)...)
+		}
+	}
 
 	var planParts []PartitionPlan
 	for idx, p := range parts {
@@ -177,6 +186,9 @@ func (p PlanResult) String() string {
 				label = fmt.Sprintf("%s mounted on %s", label, part.Mountpoint)
 			}
 			label += ")"
+		}
+		if part.Mountpoint == "" {
+			label += " (unmounted source)"
 		}
 		out += fmt.Sprintf("  - %s: %s\n", label, part.Action)
 	}

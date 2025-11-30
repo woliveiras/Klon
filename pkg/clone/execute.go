@@ -12,6 +12,7 @@ type ExecutionStep struct {
 	PartitionIndex  int
 	Mountpoint      string
 	Description     string
+	SizeBytes       int64
 }
 
 // Runner abstracts how execution steps are performed. The initial implementation
@@ -42,6 +43,17 @@ func BuildExecutionSteps(plan PlanResult, opts PlanOptions) []ExecutionStep {
 			Mountpoint:      "",
 			Description:     desc,
 		})
+		if opts.P1SizeBytes > 0 {
+			steps = append(steps, ExecutionStep{
+				Operation:       "resize-p1",
+				SourceDevice:    "",
+				DestinationDisk: opts.Destination,
+				PartitionIndex:  1,
+				Mountpoint:      "",
+				SizeBytes:       opts.P1SizeBytes,
+				Description:     fmt.Sprintf("resize partition 1 on %s to %d bytes", opts.Destination, opts.P1SizeBytes),
+			})
+		}
 	}
 
 	for _, part := range plan.Partitions {

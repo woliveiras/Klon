@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -17,13 +18,18 @@ func NewLocalSystem() System {
 	return localSystem{}
 }
 
+// AllParts exposes unmounted partitions for use with all-sync.
+func (localSystem) AllParts(disk string) []MountedPartition {
+	return allPartitionsIncludingUnmounted(disk)
+}
+
 // BootDisk attempts to detect the device that backs the root filesystem.
 //
 // Implementation notes:
-// - On Linux it reads /proc/self/mounts and looks for the line whose
-//   mountpoint is "/".
-// - If anything fails, it falls back to a generic "booted-disk" string,
-//   to keep behaviour safe and predictable across platforms.
+//   - On Linux it reads /proc/self/mounts and looks for the line whose
+//     mountpoint is "/".
+//   - If anything fails, it falls back to a generic "booted-disk" string,
+//     to keep behaviour safe and predictable across platforms.
 func (localSystem) BootDisk() (string, error) {
 	data, err := os.ReadFile("/proc/self/mounts")
 	if err != nil {
@@ -55,6 +61,38 @@ func (localSystem) MountedPartitions(disk string) ([]MountedPartition, error) {
 		return nil, nil
 	}
 	return parseMountedPartitionsForDisk(string(data), disk)
+}
+
+// allPartitionsIncludingUnmounted returns partitions of the disk using lsblk.
+// Mountpoint may be empty when not mounted.
+func allPartitionsIncludingUnmounted(disk string) []MountedPartition {
+	base := strings.TrimPrefix(baseDiskFromDevice(disk), "/dev/")
+	cmd := exec.Command("lsblk", "-nr", "-o", "NAME,MOUNTPOINT,TYPE")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil
+	}
+	var res []MountedPartition
+	scanner := bufio.NewScanner(strings.NewReader(string(out)))
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) < 3 {
+			continue
+		}
+		name, mnt, typ := fields[0], fields[1], fields[2]
+		if typ != "part" {
+			continue
+		}
+		if !strings.HasPrefix(name, base) {
+			continue
+		}
+		dev := "/dev/" + name
+		if mnt == "-" {
+			mnt = ""
+		}
+		res = append(res, MountedPartition{Device: dev, Mountpoint: mnt})
+	}
+	return res
 }
 
 // parseRootDevice parses the content of /proc/self/mounts and returns the
@@ -132,4 +170,3 @@ func parseMountedPartitionsForDisk(mounts string, disk string) ([]MountedPartiti
 
 	return result, nil
 }
-
