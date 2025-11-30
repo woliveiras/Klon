@@ -73,6 +73,7 @@ sudo klon -f --dest-root /mnt/clone sda
 This command will:
 - detect and validate the boot and destination disks,
 - clone the partition table from the boot disk to `/dev/sda` (because of `-f`),
+- resize the destination partition 1 right after cloning the table if you pass `-p1-size` (so the new layout is used for mkfs/sync),
 - create new file systems on the destination partitions,
 - mount each destination partition under `/mnt/clone/...`,
 - use `rsync` to copy files (for `/` it excludes pseudo-filesystems and runtime directories such as `/proc`, `/sys`, `/dev`, `/run`, `/tmp`, `/mnt`, `/media`),
@@ -81,20 +82,35 @@ This command will:
 
 Use this only with a destination disk you are prepared to completely overwrite.
 
-### Main command-line flags
+### Main command-line flags (overview)
 
-- `-f` – marks the plan as an **initialize + sync** clone (recreates partition table and file systems on the destination).
-- `-f2` – combined with `-f`, initializes only the first two partitions.
-- `-q` – quiet mode (implies unattended; minimal output; no final confirmation in `--apply`).
-- `-u` – unattended if **not** initializing (skip confirmations when only syncing).
-- `-U` – unattended even when initializing (skip confirmations for destructive steps).
-- `-v` – verbose: also prints the planned steps in plan-only mode.
-- `--dest-root` – directory where destination partitions will be mounted during the clone (default: `/mnt/clone`).
-- `--exclude` – extra patterns to exclude from `rsync` (comma-separated list).
-- `--exclude-from` – list of files with `rsync` exclude patterns (comma-separated).
-- `--hostname` – sets the hostname in the cloned system (adjusts `/etc/hostname` and `/etc/hosts`).
- - `--expand-root` – after cloning the partition table, grow the last data partition on the destination disk (usually the root filesystem) to use all remaining free space.
- - `--delete-dest` – when syncing, delete files on the destination that do not exist on the source (maps to rsync `--delete`). Use with care.
+Partitioning:
+- `-f` / `-f2` – initialize table/FS; `-f2` limits to boot+root only.
+- `-p1-size 256M|1G` – resize destination partition 1 when initializing.
+- `--expand-root` – grow the last data partition to fill remaining space.
+- `-a` – sync all disk partitions (even unmounted ones).
+- `-m /foo,/bar` – sync only these mountpoints (root is always included).
+
+Safety/execution:
+- `-q` / `-u` / `-U` – quiet/unattended modes.
+- `--auto-approve` – skip final confirmation.
+- `-F` – force even if destination is smaller (may fail).
+- `--delete-dest` – use `rsync --delete` on destination (careful).
+
+Post-clone/system:
+- `--hostname` – set hostname and `/etc/hosts` in the clone.
+- `-e/--edit-fstab sdX` – rewrite fstab device names with the given disk prefix.
+- `--convert-fstab-to-partuuid` – convert fstab/cmdline to destination PARTUUID.
+- `-l` – keep current cmdline when SD→USB boot is already configured.
+- `-L label[#]` – label ext partitions; suffix `#` numbers all.
+- `-s arg -s arg2` – run `klon-setup` in chroot on the clone with args.
+
+Rsync filters:
+- `--exclude`, `--exclude-from` – extra patterns.
+- Defaults exclude `/proc`, `/sys`, `/dev`, `/run`, `/tmp`, `/mnt`, `/media`, caches/logs.
+
+Other:
+- `--dest-root` – where to mount the destination during clone (default `/mnt/clone`).
 
 ## Development
 

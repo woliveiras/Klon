@@ -32,9 +32,12 @@ There are two primary usage styles:
      - In `--apply` mode, performs safety checks, shows a summary, asks for
        confirmation (depending on quiet/unattended flags), then calls
        `clone.Apply(plan, opts, runner)`.
-   - `pkg/clone` inspects the system and builds a safe, high-level plan of
-     partitions and actions before anything is modified on disk, and can also
-     execute that plan via a `Runner` implementation.
+  - `pkg/clone` inspects the system and builds a safe, high-level plan of
+    partitions and actions before anything is modified on disk, and can also
+    execute that plan via a `Runner` implementation.
+    - When `-p1-size` is provided along with initialization, the runner resizes
+      partition 1 immediately after cloning the partition table so subsequent
+    `mkfs` and `rsync` use the final layout.
 
 2. **Interactive (user-friendly) mode**, used when no destination/flags are given:
    - The user runs simply `klon`.
@@ -177,8 +180,8 @@ Execution:
         table when the strategy is `clone-table`.
     - For `"grow-partition"` operations (when `ExpandLastPartition` is true):
       - Uses `parted -s <dest> resizepart <n> 100%` to grow the last data
-        partition (geralmente a root) para usar todo o espaço restante do disco
-        de destino antes de criar o filesystem.
+        partition (usually the root) so it uses all remaining free space on the
+        destination before resizing the filesystem.
     - For `"initialize-partition"` operations:
       - Detects the filesystem on the source partition using `lsblk`.
       - Runs `mkfs.ext4`, `mkfs.vfat` or `mkswap` on the corresponding

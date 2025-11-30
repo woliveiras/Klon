@@ -65,7 +65,17 @@ func (r *CommandRunner) runPrepareDisk(step ExecutionStep) error {
 	if err != nil {
 		return fmt.Errorf("prepare-disk on %s: %w", step.DestinationDisk, err)
 	}
-	return runShellCommand(cmdStr)
+	if err := runShellCommand(cmdStr); err != nil {
+		return err
+	}
+	if step.SizeBytes > 0 {
+		// Immediately resize partition 1 so subsequent mkfs/sync happen on the
+		// correct layout, instead of resizing later.
+		if err := r.runResizeP1(step); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *CommandRunner) runGrowPartition(step ExecutionStep) error {
