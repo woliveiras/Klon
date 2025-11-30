@@ -10,6 +10,9 @@ import (
 	"syscall"
 )
 
+// shellExec is a hookable command executor; tests can override it.
+var shellExec = runShellCommand
+
 // CommandRunner executes ExecutionStep values by invoking system commands.
 // It uses BuildPartitionCommand and BuildSyncCommand to derive the concrete
 // command lines and then runs them with /bin/sh -c. All commands are logged
@@ -76,7 +79,7 @@ func (r *CommandRunner) runPrepareDisk(step ExecutionStep) error {
 	if err != nil {
 		return fmt.Errorf("prepare-disk on %s: %w", step.DestinationDisk, err)
 	}
-	if err := runShellCommand(r.ctx, cmdStr); err != nil {
+	if err := shellExec(r.ctx, cmdStr); err != nil {
 		return err
 	}
 	if step.SizeBytes > 0 {
@@ -98,16 +101,16 @@ func (r *CommandRunner) runGrowPartition(step ExecutionStep) error {
 
 	// First grow the partition to consume all remaining space.
 	cmdStr := fmt.Sprintf("parted -s %s resizepart %d 100%%", disk, step.PartitionIndex)
-	if err := runShellCommand(r.ctx, cmdStr); err != nil {
+	if err := shellExec(r.ctx, cmdStr); err != nil {
 		return fmt.Errorf("grow-partition on %s: parted failed; ensure no partitions are mounted and the disk is healthy: %w", step.DestinationDisk, err)
 	}
 
 	// Then grow the filesystem inside the partition. We currently support
 	// ext-based roots (mkfs.ext4), so resize2fs is appropriate here. Run a
 	// non-interactive e2fsck first as resize2fs recommends.
-	_ = runShellCommand(r.ctx, fmt.Sprintf("e2fsck -f -p %s || true", part))
+	_ = shellExec(r.ctx, fmt.Sprintf("e2fsck -f -p %s || true", part))
 
-	if err := runShellCommand(r.ctx, fmt.Sprintf("resize2fs %s", part)); err != nil {
+	if err := shellExec(r.ctx, fmt.Sprintf("resize2fs %s", part)); err != nil {
 		return fmt.Errorf("grow-partition on %s: resize2fs failed for %s: %w", step.DestinationDisk, part, err)
 	}
 
@@ -120,7 +123,7 @@ func (r *CommandRunner) runResizeP1(step ExecutionStep) error {
 	}
 	disk := ensureDevPrefix(step.DestinationDisk)
 	cmdStr := fmt.Sprintf("parted -s %s resizepart 1 %dB", disk, step.SizeBytes)
-	if err := runShellCommand(r.ctx, cmdStr); err != nil {
+	if err := shellExec(r.ctx, cmdStr); err != nil {
 		return fmt.Errorf("resize-p1 on %s: parted failed: %w", step.DestinationDisk, err)
 	}
 	return nil
@@ -148,19 +151,19 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 
 	dstPart := partitionDevice(step.DestinationDisk, step.PartitionIndex)
 	mountCmd := fmt.Sprintf("mount %s %s", dstPart, destPath)
-	if err := runShellCommand(r.ctx, mountCmd); err != nil {
+	if err := shellExec(r.ctx, mountCmd); err != nil {
 		return fmt.Errorf("sync-filesystem on %s: failed to mount %s on %s: %w. Is the device busy or missing drivers?", step.DestinationDisk, dstPart, destPath, err)
 	}
 	defer func() {
 		umountCmd := fmt.Sprintf("umount %s", destPath)
-		if err := runShellCommand(r.ctx, umountCmd); err != nil {
+		if err := shellExec(r.ctx, umountCmd); err != nil {
 			logSink.Printf("klon: WARNING: failed to unmount %s: %v", destPath, err)
 		}
 	}()
 
 	// Show destination filesystem usage before syncing so the user can see
 	// progress (especially for large clones).
-	_ = runShellCommand(r.ctx, fmt.Sprintf("df -h %s", destPath))
+	_ = shellExec(r.ctx, fmt.Sprintf("df -h %s", destPath))
 
 	// If source is not mounted, mount it temporarily to sync.
 	srcMount := step.Mountpoint
@@ -172,12 +175,12 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 		}
 		tempSrc = tmpDir
 		mntCmd := fmt.Sprintf("mount -o ro %s %s", ensureDevPrefix(step.SourceDevice), tempSrc)
-		if err := runShellCommand(r.ctx, mntCmd); err != nil {
+		if err := shellExec(r.ctx, mntCmd); err != nil {
 			os.RemoveAll(tempSrc)
 			return fmt.Errorf("sync-filesystem on %s: failed to mount source %s on %s: %w", step.DestinationDisk, step.SourceDevice, tempSrc, err)
 		}
 		defer func() {
-			_ = runShellCommand(r.ctx, fmt.Sprintf("umount %s", tempSrc))
+			_ = shellExec(r.ctx, fmt.Sprintf("umount %s", tempSrc))
 			_ = os.RemoveAll(tempSrc)
 		}()
 		srcMount = tempSrc
@@ -213,7 +216,7 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 	}
 
 	// Show destination filesystem usage after syncing.
-	_ = runShellCommand(r.ctx, fmt.Sprintf("df -h %s", destPath))
+	_ = shellExec(r.ctx, fmt.Sprintf("df -h %s", destPath))
 	return nil
 }
 
@@ -341,7 +344,7 @@ func (r *CommandRunner) runInitializePartition(step ExecutionStep) error {
 		return fmt.Errorf("initialize-partition: unsupported filesystem type %q", srcFs)
 	}
 
-	return runShellCommand(r.ctx, cmdStr)
+	return shellExec(r.ctx, cmdStr)
 }
 
 func runShellCommand(ctx context.Context, cmdStr string) error {

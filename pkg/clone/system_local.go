@@ -124,22 +124,26 @@ func baseDiskFromDevice(dev string) string {
 		return dev
 	}
 
-	s := dev
-	// Trim trailing digits (partition numbers).
-	for len(s) > 0 {
-		last := s[len(s)-1]
+	name := strings.TrimPrefix(dev, "/dev/")
+
+	// mmcblk0p1 / nvme0n1p2 style: everything before the last 'p' is the base.
+	if strings.HasPrefix(name, "mmcblk") || strings.HasPrefix(name, "nvme") {
+		if idx := strings.LastIndex(name, "p"); idx != -1 {
+			return "/dev/" + name[:idx]
+		}
+		return "/dev/" + name
+	}
+
+	// Generic block devices: strip trailing digits (sda1 -> sda).
+	for len(name) > 0 {
+		last := name[len(name)-1]
 		if last < '0' || last > '9' {
 			break
 		}
-		s = s[:len(s)-1]
+		name = name[:len(name)-1]
 	}
 
-	// For devices like mmcblk0p2 or nvme0n1p2, trim the trailing 'p'.
-	if strings.HasSuffix(s, "p") && (strings.Contains(s, "mmcblk") || strings.Contains(s, "nvme")) {
-		s = s[:len(s)-1]
-	}
-
-	return s
+	return "/dev/" + name
 }
 
 // parseMountedPartitionsForDisk parses /proc/self/mounts contents and returns

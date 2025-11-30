@@ -84,8 +84,8 @@ func ValidateCloneSafety(plan PlanResult, opts PlanOptions) error {
 }
 
 func sameDisk(a, b string) bool {
-	baseA := baseDiskFromDevice(a)
-	baseB := baseDiskFromDevice(b)
+	baseA := baseDiskFromDevice(ensureDevPrefix(a))
+	baseB := baseDiskFromDevice(ensureDevPrefix(b))
 	return baseA == baseB
 }
 
