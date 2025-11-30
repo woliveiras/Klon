@@ -1,3 +1,6 @@
+// Klon is the command-line entry point for cloning Raspberry Pi disks using
+// the underlying clone package. It parses CLI arguments and delegates to
+// pkg/cli.Run.
 package main
 
 import (
