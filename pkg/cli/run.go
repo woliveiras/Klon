@@ -97,6 +97,10 @@ func run(args []string, ui UI) error {
 		return fmt.Errorf("no arguments provided")
 	}
 
+	if err := clone.CheckPrerequisites(); err != nil {
+		return fmt.Errorf("prerequisite check failed: %w", err)
+	}
+
 	opts, rest, err := parseFlags(args)
 	if err != nil {
 		return err
@@ -164,7 +168,7 @@ func run(args []string, ui UI) error {
 	}
 
 	if err := clone.ValidateCloneSafety(plan, planOpts); err != nil {
-		return err
+		return fmt.Errorf("safety check failed: %w", err)
 	}
 
 	// Decide confirmation behaviour based on quiet/unattended flags.
@@ -185,7 +189,7 @@ func run(args []string, ui UI) error {
 			destDev = "/dev/" + destDev
 		}
 		msg := fmt.Sprintf(
-			"About to ERASE ALL DATA on %s by cloning from %s. Proceed?",
+			"WARNING: this will ERASE ALL DATA on %s and recreate partitions cloned from %s. Type yes to continue.",
 			destDev,
 			plan.SourceDisk,
 		)
@@ -299,7 +303,7 @@ func interactiveWizard(ui UI) (Options, error) {
 		return Options{}, fmt.Errorf("interactive clone cancelled by user")
 	}
 
-	init, err := ui.Confirm("Reset and prepare the destination disk now? This will erase all data on the chosen disk.")
+	init, err := ui.Confirm("Reset and prepare the destination disk now? This will ERASE all data on the chosen disk.")
 	if err != nil {
 		return Options{}, err
 	}

@@ -51,7 +51,7 @@ func (r *CommandRunner) Run(step ExecutionStep) error {
 	case "sync-filesystem":
 		return r.runSyncFilesystem(step)
 	default:
-		log.Printf("klon: unknown operation %q for step: %s", step.Operation, step.Description)
+		log.Printf("klon: ignoring unknown operation %q for step: %s", step.Operation, step.Description)
 		return nil
 	}
 }
@@ -74,7 +74,7 @@ func (r *CommandRunner) runGrowPartition(step ExecutionStep) error {
 	// First grow the partition to consume all remaining space.
 	cmdStr := fmt.Sprintf("parted -s %s resizepart %d 100%%", disk, step.PartitionIndex)
 	if err := runShellCommand(cmdStr); err != nil {
-		return fmt.Errorf("grow-partition on %s: parted failed: %w", step.DestinationDisk, err)
+		return fmt.Errorf("grow-partition on %s: parted failed; ensure no partitions are mounted and the disk is healthy: %w", step.DestinationDisk, err)
 	}
 
 	// Then grow the filesystem inside the partition. We currently support
@@ -94,7 +94,7 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 		return fmt.Errorf("sync-filesystem on %s: dest root is empty", step.DestinationDisk)
 	}
 	if step.Mountpoint == "" {
-		log.Printf("klon: skipping sync-filesystem for %s: empty mountpoint", step.SourceDevice)
+		log.Printf("klon: skipping sync-filesystem for %s because the source mountpoint is empty", step.SourceDevice)
 		return nil
 	}
 
@@ -111,7 +111,7 @@ func (r *CommandRunner) runSyncFilesystem(step ExecutionStep) error {
 	dstPart := partitionDevice(step.DestinationDisk, step.PartitionIndex)
 	mountCmd := fmt.Sprintf("mount %s %s", dstPart, destPath)
 	if err := runShellCommand(mountCmd); err != nil {
-		return fmt.Errorf("sync-filesystem on %s: mount failed for %s on %s: %w", step.DestinationDisk, dstPart, destPath, err)
+		return fmt.Errorf("sync-filesystem on %s: failed to mount %s on %s: %w. Is the device busy or missing drivers?", step.DestinationDisk, dstPart, destPath, err)
 	}
 	defer func() {
 		umountCmd := fmt.Sprintf("umount %s", destPath)
@@ -222,7 +222,7 @@ func (r *CommandRunner) runParallelRootSync(destRoot string) error {
 		if err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
 				if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.ExitStatus() == 23 {
-					log.Printf("klon: WARNING: rsync exited with code 23 for command %q (partial transfer, usually due to live /proc or /sys). Continuing.", cmd.String())
+					log.Printf("klon: WARNING: rsync exited with code 23 for %q (partial transfer; entradas voláteis em /proc ou /sys são esperadas). Continuando o clone.", cmd.String())
 					errCh <- nil
 					return
 				}
@@ -285,7 +285,7 @@ func runShellCommand(cmdStr string) error {
 		log.Printf("klon: OUTPUT: %s", strings.TrimSpace(string(out)))
 	}
 	if err != nil {
-		return fmt.Errorf("command failed: %w", err)
+		return fmt.Errorf("command failed while running %q: %w", cmdStr, err)
 	}
 	return nil
 }
