@@ -2,7 +2,6 @@ package cli_test
 
 import (
     "fmt"
-    "os"
 
     "github.com/woliveiras/klon/pkg/cli"
 )
@@ -16,9 +15,8 @@ func ExampleNewStdUI() {
 }
 
 func ExampleRun_help() {
-    // Show that Run returns a non-nil error for an invalid invocation.
-    // This example is non-destructive and only demonstrates calling Run.
-    args := []string{"klon"}
+    // Calling Run with an empty args slice returns a deterministic error.
+    var args []string
     if err := cli.Run(args); err != nil {
         fmt.Println("error:", err)
     }
