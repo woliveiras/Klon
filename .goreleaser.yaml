@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+project_name: klon
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: klon
+    main: './'
+    binary: klon
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: klon
+    formats:
+      - tar.gz
+    ids:
+      - klon
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version}}_
+      {{- .Os }}_
+      {{- .Arch }}
+    files:
+      - README.md
+      - LICENSE
+
+nfpms:
+  - id: klon
+    ids:
+      - klon
+    package_name: klon
+    file_name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version}}_
+      {{- .Os }}_
+      {{- .Arch }}
+    vendor: Klon
+    homepage:  https://github.com/woliveiras/Klon
+    maintainer: Klon <contact@woliveiras.com>
+    description: Klon - Raspberry Pi disk cloning tool.
+    license: BSD 3-Clause License
+    bindir: /usr/local/bin
+    section: utils
+    formats:
+      - deb
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
