@@ -15,6 +15,14 @@ type PlanOptions struct {
 	ExpandLastPartition bool
 	DeleteDest          bool
 	ForceSync           bool
+	P1SizeBytes         int64
+	SetupArgs           []string
+	EditFstabName       string
+	LeaveSDUSB          bool
+	AllSync             bool
+	ConvertToPartuuid   bool
+	LabelPartitions     string
+	MountDirs           []string
 	Quiet               bool
 	Unattended          bool
 	UnattendedInit      bool
@@ -105,6 +113,26 @@ func PlanWithSystem(sys System, opts PlanOptions) (PlanResult, error) {
 		planParts = []PartitionPlan{
 			{Index: 1, Action: "sync"},
 			{Index: 2, Action: "sync"},
+		}
+	}
+
+	// If mountdirs are specified, filter to those mountpoints (always keep root).
+	if len(opts.MountDirs) > 0 {
+		selected := make([]PartitionPlan, 0, len(planParts))
+		for _, pp := range planParts {
+			if pp.Mountpoint == "/" {
+				selected = append(selected, pp)
+				continue
+			}
+			for _, m := range opts.MountDirs {
+				if strings.TrimSpace(m) == pp.Mountpoint {
+					selected = append(selected, pp)
+					break
+				}
+			}
+		}
+		if len(selected) > 0 {
+			planParts = selected
 		}
 	}
 

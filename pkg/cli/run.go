@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/woliveiras/klon/pkg/clone"
@@ -20,6 +21,14 @@ type Options struct {
 	ExpandLastPartition  bool // --expand-root
 	BootPartitionSizeArg string
 	ForceSync            bool // -F
+	P1SizeBytes          int64
+	SetupArgs            []string
+	EditFstabName        string
+	LeaveSDUSB           bool
+	AllSync              bool
+	ConvertToPartuuid    bool
+	LabelPartitions      string
+	MountDirs            []string
 	Quiet                bool // -q
 	Unattended           bool // -u
 	UnattendedInit       bool // -U
@@ -137,6 +146,14 @@ func run(args []string, ui UI) error {
 		ExpandLastPartition: opts.ExpandLastPartition,
 		DeleteDest:          opts.DeleteDest,
 		ForceSync:           opts.ForceSync,
+		P1SizeBytes:         opts.P1SizeBytes,
+		SetupArgs:           opts.SetupArgs,
+		EditFstabName:       opts.EditFstabName,
+		LeaveSDUSB:          opts.LeaveSDUSB,
+		AllSync:             opts.AllSync,
+		ConvertToPartuuid:   opts.ConvertToPartuuid,
+		LabelPartitions:     opts.LabelPartitions,
+		MountDirs:           opts.MountDirs,
 		Quiet:               opts.Quiet,
 		Unattended:          opts.Unattended,
 		UnattendedInit:      opts.UnattendedInit,
@@ -235,6 +252,8 @@ func parseFlags(args []string) (Options, []string, error) {
 	}
 	var excludeList string
 	var excludeFromList string
+	var mountList string
+	var setupList multiString
 
 	fs.StringVar(&opts.DestRoot, "dest-root", "/mnt/clone", "destination root mountpoint for clone")
 
@@ -247,14 +266,32 @@ func parseFlags(args []string) (Options, []string, error) {
 	fs.BoolVar(&opts.UnattendedInit, "U", false, "unattended even if initializing")
 	fs.BoolVar(&opts.AutoApprove, "auto-approve", false, "do not ask for confirmation before applying the plan")
 	fs.BoolVar(&opts.DeleteDest, "delete-dest", false, "delete files on destination that do not exist on source")
+	fs.BoolVar(&opts.AllSync, "a", false, "sync all partitions if types are compatible, not just mounted ones")
+	fs.BoolVar(&opts.LeaveSDUSB, "l", false, "leave SD to USB boot setup intact when cloning to SD from USB or vice-versa")
+	fs.BoolVar(&opts.ConvertToPartuuid, "convert-fstab-to-partuuid", false, "convert fstab entries to PARTUUID on the cloned system")
 	fs.BoolVar(&opts.Verbose, "v", false, "verbose mode")
+	fs.StringVar(&opts.BootPartitionSizeArg, "p1-size", "", "resize destination partition 1 to given size (e.g. 256M or 1G) when initializing")
+	fs.Var(&setupList, "s", "setup args for post-clone script (repeatable)")
 	fs.StringVar(&excludeList, "exclude", "", "comma-separated patterns to exclude from rsync")
 	fs.StringVar(&excludeFromList, "exclude-from", "", "comma-separated files with rsync exclude patterns")
+	fs.StringVar(&mountList, "mountdir", "", "comma-separated list of mountpoints to sync instead of all")
 	fs.StringVar(&opts.Hostname, "hostname", "", "set hostname on cloned system")
 	fs.StringVar(&opts.LogFile, "log-file", "", "append logs to this file instead of stderr")
+	fs.StringVar(&opts.EditFstabName, "edit-fstab", "", "edit destination fstab to change device names to this disk prefix (e.g. sda)")
+	fs.StringVar(&opts.LabelPartitions, "label-partitions", "", "label ext partitions (suffix # applies numbering)")
 
 	if err := fs.Parse(args[1:]); err != nil {
 		return Options{}, nil, err
+	}
+
+	opts.SetupArgs = setupList
+
+	if opts.BootPartitionSizeArg != "" {
+		sizeBytes, err := parseSizeToBytes(opts.BootPartitionSizeArg)
+		if err != nil {
+			return Options{}, nil, fmt.Errorf("invalid -p1-size: %w", err)
+		}
+		opts.P1SizeBytes = sizeBytes
 	}
 
 	// Apply implied semantics.
@@ -278,8 +315,47 @@ func parseFlags(args []string) (Options, []string, error) {
 			}
 		}
 	}
+	if mountList != "" {
+		for _, m := range strings.Split(mountList, ",") {
+			m = strings.TrimSpace(m)
+			if m != "" {
+				opts.MountDirs = append(opts.MountDirs, m)
+			}
+		}
+	}
 
 	return opts, fs.Args(), nil
+}
+
+type multiString []string
+
+func (m *multiString) String() string {
+	return strings.Join(*m, ",")
+}
+
+func (m *multiString) Set(value string) error {
+	*m = append(*m, value)
+	return nil
+}
+
+func parseSizeToBytes(v string) (int64, error) {
+	v = strings.TrimSpace(strings.ToUpper(v))
+	if v == "" {
+		return 0, fmt.Errorf("empty size")
+	}
+	mult := int64(1)
+	if strings.HasSuffix(v, "M") {
+		mult = 1024 * 1024
+		v = strings.TrimSuffix(v, "M")
+	} else if strings.HasSuffix(v, "G") {
+		mult = 1024 * 1024 * 1024
+		v = strings.TrimSuffix(v, "G")
+	}
+	num, err := strconv.ParseInt(v, 10, 64)
+	if err != nil || num <= 0 {
+		return 0, fmt.Errorf("could not parse size %q", v)
+	}
+	return num * mult, nil
 }
 
 // interactiveWizard asks a minimal set of questions to obtain safe defaults
