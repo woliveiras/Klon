@@ -1,3 +1,8 @@
+## v2.1.0 - 2025-11-30
+
+- fix: changelog is not updated in release page (b74094b)
+- chore: avoid build and ci in releases (7495b6f)
+
 ## v2.0.0 - 2025-11-30
 
 - chore: update doc strings (52cd081)
