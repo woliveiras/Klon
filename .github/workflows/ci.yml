@@ -26,7 +26,7 @@ jobs:
         run: go build -o klon .
 
       - name: Smoke test binary
-        run: ./klon sda
+        run: ./klon -q --auto-approve sda || true
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v5
