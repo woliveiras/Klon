@@ -1,3 +1,8 @@
+## v1.1.5 - 2025-11-30
+
+- docs: add release guide (6a44753)
+- docs(cli): add package doc and examples for pkg.go.dev (5e6c58e)
+
 ## v1.1.4 - 2025-11-30
 
 - fix: make push is not working (7aac0e6)
