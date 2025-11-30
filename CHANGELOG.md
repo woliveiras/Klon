@@ -1,3 +1,26 @@
+## v2.0.0 - 2025-11-30
+
+- chore: update doc strings (52cd081)
+- feat: add make install (55c5a62)
+- chore: increment tests (3ed9a84)
+- chore: add logsink (ad5cdf6)
+- feat: add new-layout-gpt (afb17a0)
+- chore: update docs (60d5022)
+- feat: add post clone extras (1271a1e)
+- fix: stops before apply while in noop mode (9edee38)
+- fix: smoke test ci (cc4e19d)
+- chore: add coverage (bee3605)
+- feat: add --noop-runner (2ab2b00)
+- feat: implements delete root (be2d21f)
+- chore: enhance partition process (5b900ad)
+- chore: implements apply labels (b4d4bdf)
+- feat: add resize-p1 (12cae93)
+- feat: add missing flags (a4f3b16)
+- feat: add force sync (1dcadb8)
+- chore: add --delete flag (c4dc001)
+- chore: add safety guards (a81ae7c)
+- chore: enhance makefile (3104808)
+
 ## v1.2.1 - 2025-11-30
 
 - No changes recorded.
