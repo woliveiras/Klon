@@ -227,17 +227,15 @@ In this case:
 - The plan and confirmation prompt appear in your terminal.
 - All internal commands and outputs are also appended to `/var/log/klon.log`, which you can inspect later or collect via your logging stack.
 
-### Running unit tests
+### Running tests and coverage
 
-To run unit tests, you can use:
+You can run unit tests directly:
 
 ```bash
 go test ./...
 ```
 
-You can keep this command running in a watch mode by using external tools (like `entr`, `watchexec`, or your editor’s test runner) so that tests are executed automatically as you change the code.
-
-Alternatively, you can use the provided `Makefile` targets during development:
+Or use the `Makefile` shortcuts:
 
 ```bash
 make test          # go test ./...
@@ -245,4 +243,6 @@ make test-file FILE=./pkg/cli
 make test-watch    # requires entr
 make lint          # golangci-lint run ./... (if installed) or go vet ./...
 make build         # build klon for current platform
+make cover         # go test -coverprofile=coverage.out ./...
+make cover-html    # generate coverage.html from coverage.out
 ```

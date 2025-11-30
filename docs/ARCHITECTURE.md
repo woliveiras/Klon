@@ -200,6 +200,8 @@ Execution:
 - Other `Runner` implementations (e.g. pure logging or plan-only runners)
   can be plugged in for testing or alternative front-ends.
   - A `NoopRunner` is available to log steps without executing commands (CI).
+  - CI workflow uses the noop runner with `--noop-runner` to avoid touching
+    disks while still validating plans and coverage.
 
 ## Test-Driven Development (TDD)
 

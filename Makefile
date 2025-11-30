@@ -1,5 +1,6 @@
 SHELL := /bin/bash
 .PHONY: help test test-short test-file test-watch lint vet build build-linux check prepare push release
+.PHONY: cover cover-html
 
 
 help:
@@ -13,6 +14,8 @@ help:
 	@echo "  vet           - run go vet ./..."
 	@echo "  build         - build klon for the current platform"
 	@echo "  build-linux   - build klon for linux/amd64 (override GOOS/GOARCH as needed)"
+	@echo "  cover         - run tests with coverage and write coverage.out"
+	@echo "  cover-html    - generate coverage.html from coverage.out"
 	@echo "  check         - ensure git is available and working tree is clean"
 	@echo "  prepare       - run the release script (creates changelog, commit and tag)"
 	@echo "  push          - push commits and tags to origin"
@@ -58,6 +61,14 @@ build:
 build-linux:
 	@echo "Building klon for linux/amd64 (override GOOS/GOARCH to change)..."
 	@GOOS=${GOOS:-linux} GOARCH=${GOARCH:-amd64} go build -o klon .
+
+cover:
+	@echo "Running coverage (coverage.out)..."
+	go test -coverprofile=coverage.out ./...
+
+cover-html: cover
+	@echo "Generating coverage.html..."
+	go tool cover -html=coverage.out -o coverage.html
 
 check:
 	@command -v git >/dev/null || { echo "git is required" >&2; exit 1; }
