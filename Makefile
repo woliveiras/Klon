@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 .PHONY: help check prepare push release
 
+
 help:
 	@echo "Usage: make <target> [VERSION=vX.Y.Z | RELEASE=major|minor|patch]"
 	@echo "Targets:"
@@ -8,6 +9,7 @@ help:
 	@echo "  prepare   - run the release script (creates changelog, commit and tag)"
 	@echo "  push      - push commits and tags to origin"
 	@echo "  release   - prepare and push (safe wrapper)"
+	@echo "Note: Do NOT run make with sudo. Run as your normal user."
 
 check:
 	@command -v git >/dev/null || { echo "git is required" >&2; exit 1; }
@@ -27,12 +29,18 @@ prepare:
 	  bash ./scripts/release.sh $(VERSION); \
 	fi
 
-
 push:
+	@# If VERSION is not provided, take the most recent semver tag
 	@if [ -z "$(VERSION)" ]; then \
-	  echo "VERSION is required for push. Run prepare first and set VERSION to the tag created." >&2; exit 1; \
-	fi
-	@echo "Pushing branch and tags for $(VERSION)"
+	  VERSION="$$(git --no-pager tag --list --sort=-v:refname | head -n1)"; \
+	  if [ -z "$${VERSION}" ]; then \
+	    echo "No VERSION supplied and no tags found. Run make prepare first or pass VERSION." >&2; exit 1; \
+	  fi; \
+	  echo "Detected VERSION=$${VERSION}"; \
+	else \
+	  VERSION="$(VERSION)"; \
+	fi; \
+	@echo "Pushing branch and tags for $${VERSION}"
 	@git push origin main --follow-tags
 
 release: check prepare push
