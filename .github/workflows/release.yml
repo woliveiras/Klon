@@ -20,91 +20,13 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Derive version
-        id: version
-        run: |
-          # Strip leading "v" from tag for package names
-          RAW_TAG="${GITHUB_REF_NAME}"
-          VERSION="${RAW_TAG#v}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+      - name: unshallow
+        run: git fetch --prune --unshallow
 
-      - name: Build binaries (linux/amd64 and linux/arm64)
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          mkdir -p dist/bin
-          GOOS=linux GOARCH=amd64 go build -o "dist/bin/klon_${VERSION}_linux_amd64" .
-          GOOS=linux GOARCH=arm64 go build -o "dist/bin/klon_${VERSION}_linux_arm64" .
-
-      - name: Package tarballs
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          mkdir -p dist
-          for f in dist/bin/klon_*; do
-            base="$(basename "$f")"
-            tar -C dist/bin -czf "dist/${base}.tar.gz" "$base"
-          done
-
-      - name: Build Debian packages
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          build_deb() {
-            arch="$1"
-            bin="dist/bin/klon_${VERSION}_linux_${arch}"
-            staging="dist/deb_${arch}/usr/local/bin"
-            mkdir -p "${staging}"
-            install -m 0755 "${bin}" "${staging}/klon"
-
-            mkdir -p "dist/deb_${arch}/DEBIAN"
-            cat > "dist/deb_${arch}/DEBIAN/control" <<EOF
-          Package: klon
-          Version: ${VERSION}
-          Section: utils
-          Priority: optional
-          Architecture: ${arch}
-          Maintainer: Klon <maintainer@example.com>
-          Description: Klon - Raspberry Pi disk cloning tool
-          EOF
-            dpkg-deb --build "dist/deb_${arch}" "dist/klon_${VERSION}_linux_${arch}.deb"
-          }
-          build_deb amd64
-          build_deb arm64
-
-      - name: Extract changelog entry for tag
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          # Extract the changelog section for the tag into a file.
-          # Assumes CHANGELOG.md uses headings like "## v1.2.3 - YYYY-MM-DD" (suffix optional).
-          # Match the heading line even if it has a trailing date or text.
-          awk -v tag="## ${TAG}" '
-            index($0, tag) == 1 { capture = 1; next }
-            /^## v[0-9]/ && capture { exit }
-            capture { print }
-          ' CHANGELOG.md > release_body_content.md || true
-
-          # If nothing was captured, produce a minimal body.
-          if [ ! -s release_body_content.md ]; then
-            echo "No changelog entry found for ${TAG}" > release_body_content.md
-          fi
-
-          # Prefix with a header with the tag
-          {
-            echo "${TAG}";
-            echo "";
-            cat release_body_content.md;
-          } > release_body.md
-      - name: Create GitHub release
-        uses: ncipollo/release-action@v1
+      - name: run goreleaser
+        uses: goreleaser/goreleaser-action@v6
         with:
-          tag: ${{ github.ref_name }}
-          bodyFile: release_body.md
-          artifacts: "dist/*.tar.gz,dist/*.deb"
-          artifactContentType: application/octet-stream
-          draft: false
-          prerelease: false
+          version: "v2.13.0"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
