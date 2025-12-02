@@ -1,3 +1,8 @@
+## v2.3.0 - 2025-12-02
+
+- chore: add goreleaser (d6ffd27)
+- chore: use goreleaser for distribution (6b793cf)
+
 ## v2.2.0 - 2025-11-30
 
 - chore: update readme (5a0f127)
